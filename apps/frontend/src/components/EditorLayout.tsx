@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useYjsProvider } from '../hooks/useYjsProvider';
 import { MarkdownEditor } from './MarkdownEditor';
+import { MarkdownPreview } from './MarkdownPreview';
 
-export function EditorLayout() {
+interface EditorLayoutProps {
+  userName: string;
+}
+
+export function EditorLayout({ userName }: EditorLayoutProps) {
   const [markdown, setMarkdown] = useState('# Welcome to the Markdown Editor\n\nStart typing to see the preview update in real-time.');
 
-  // Initialize Yjs provider with default document 'welcome'
-  const { ydoc: _ydoc, ytext, provider: _provider, status } = useYjsProvider('welcome');
+  // Initialize Yjs provider with default document 'welcome' and user name
+  const { ydoc: _ydoc, ytext, provider: _provider, awareness: _awareness, status } = useYjsProvider('welcome', userName);
 
   // Sync markdown state with Y.Text for preview pane
   useEffect(() => {
@@ -50,9 +55,7 @@ export function EditorLayout() {
           />
         </div>
         <div className="preview-pane">
-          <div className="preview-content">
-            {markdown}
-          </div>
+          <MarkdownPreview content={markdown} />
         </div>
       </div>
     </div>

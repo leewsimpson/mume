@@ -23,7 +23,7 @@ function App() {
   }
 
   // Show editor interface after name is set
-  return <EditorLayout />
+  return <EditorLayout userName={userName} />
 }
 
 export default App
