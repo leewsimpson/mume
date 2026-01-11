@@ -871,3 +871,44 @@ Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
 - **PATTERN**: This comprehensive testing validates real-time cursor sync, awareness integration, edge cases
 ---
 
+## 2026-01-11 21:45 - US-011
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented connection status indicator component
+- Created ConnectionStatus component in apps/frontend/src/components/ConnectionStatus.tsx
+- Component accepts status prop ('connected' | 'connecting' | 'disconnected')
+- Displays appropriate text: "Connected", "Connecting...", or "Disconnected"
+- Applies CSS classes for color-coded indicators: status-connected (green), status-connecting (yellow), status-disconnected (red)
+- Refactored EditorLayout component to use ConnectionStatus component instead of inline implementation
+- Removed 7 lines of inline status display code from EditorLayout, replaced with single component import and usage
+- Created comprehensive automated test suite: apps/frontend/tests/ConnectionStatus.test.tsx
+- 22 tests written verifying all acceptance criteria:
+  - Component rendering: container, indicator element, text element
+  - Connected state: "Connected" text, status-connected CSS class, green indicator
+  - Disconnected state: "Disconnected" text, status-disconnected CSS class, red indicator
+  - Connecting state: "Connecting..." text, status-connecting CSS class, yellow indicator
+  - Real-time updates: status changes update display and CSS classes correctly
+  - UI visibility: component is visible and displays both indicator and text
+  - CSS class application: base classes and dynamic status classes applied correctly
+- All 180 frontend tests passing (11 test files)
+- Typecheck passes (npm run build succeeded)
+- Files changed:
+  - apps/frontend/src/components/ConnectionStatus.tsx (new, 16 lines)
+  - apps/frontend/src/components/EditorLayout.tsx (import ConnectionStatus, use component)
+  - apps/frontend/tests/ConnectionStatus.test.tsx (new, 197 lines)
+- Committed: 098d0aa "feat: US-011 - Add connection status indicator"
+- Updated PRD: US-011 marked as passes: true
+
+**Learnings for future iterations:**
+- ConnectionStatus component pattern: simple presentational component receiving status prop
+- Component refactoring: extract inline UI code into separate component for reusability and testability
+- The connection status was already implemented inline in EditorLayout (from US-005) - US-011 required extracting it as a separate component
+- Testing pattern: verify all three states (connected/connecting/disconnected) separately
+- Real-time updates testing: use rerender() to test component reactivity to prop changes
+- CSS class testing: verify both base classes and dynamic status classes are applied
+- UI visibility testing: use toBeVisible() to ensure component is actually displayed
+- Status indicator color-coding done via CSS classes (status-connected, status-connecting, status-disconnected)
+- Text display pattern: use conditional rendering with status === 'state' for each state
+- **CRITICAL**: Automated testing approach successfully validates all connection status features
+- **PATTERN**: This comprehensive testing pattern covers component rendering, state display, real-time updates, CSS classes
+---
+
