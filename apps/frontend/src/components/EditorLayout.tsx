@@ -3,6 +3,7 @@ import { useYjsProvider } from '../hooks/useYjsProvider';
 import { MarkdownEditor } from './MarkdownEditor';
 import { MarkdownPreview } from './MarkdownPreview';
 import { UserPresence } from './UserPresence';
+import { ConnectionStatus } from './ConnectionStatus';
 
 interface EditorLayoutProps {
   userName: string;
@@ -40,14 +41,7 @@ export function EditorLayout({ userName, documentId }: EditorLayoutProps) {
   return (
     <div className="editor-layout">
       <div className="editor-header">
-        <div className="connection-status">
-          <span className={`status-indicator status-${status}`}></span>
-          <span className="status-text">
-            {status === 'connected' && 'Connected'}
-            {status === 'connecting' && 'Connecting...'}
-            {status === 'disconnected' && 'Disconnected'}
-          </span>
-        </div>
+        <ConnectionStatus status={status} />
         <UserPresence awareness={awareness} />
       </div>
       <div className="editor-content">

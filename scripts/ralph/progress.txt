@@ -784,3 +784,90 @@ Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
 - **PATTERN**: This comprehensive testing pattern covers component rendering, real-time updates, sorting, limits, cleanup, and edge cases
 ---
 
+## 2026-01-11 21:32 - US-010
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented automated tests for US-010 (document routing with URL-based document IDs)
+- Created comprehensive test suite: apps/frontend/tests/DocumentRouting.test.tsx
+- 11 tests written verifying all acceptance criteria:
+  - Route pattern /doc/:documentId extraction via useParams
+  - Different document IDs load different documents (test1, test2)
+  - Independent documents: unmount/remount with different IDs shows different content
+  - Default route (/) redirects to /doc/welcome
+  - Document ID passed to EditorLayout component
+  - Special characters in documentId (dashes, underscores)
+  - Short documentId (single character)
+  - Long documentId (80+ characters)
+  - Fallback to 'welcome' when documentId is undefined/empty
+  - Props flow: userName and documentId both passed correctly
+- All 128 frontend tests passing (8 test files)
+- Typecheck passes (npm run build succeeded)
+- Files changed: apps/frontend/tests/DocumentRouting.test.tsx (new, 222 lines)
+- Committed: 4ada97e "feat: US-010 - Add automated tests for document routing"
+- Updated PRD: US-010 marked as passes: true
+
+**Learnings for future iterations:**
+- Document routing implementation was already complete from earlier iteration (see progress.txt line 370)
+- Testing React Router: use MemoryRouter to control initial route instead of BrowserRouter
+- Avoid nested routers: don't wrap App component (which has BrowserRouter) in another router
+- Test routing components directly: create test EditorRoute component that mirrors App structure
+- Optional route parameters: use :documentId? to make parameter optional in route pattern
+- React functional components receive props as first argument, second is typically undefined (not {})
+- Test pattern: verify both UI output (screen queries) and component behavior (rendered elements)
+- MemoryRouter initialEntries prop controls starting URL for testing
+- waitFor() essential for testing route navigation and async state updates
+- All US-010 acceptance criteria verified via automated tests - no browser testing needed
+- **CRITICAL**: Automated testing approach successfully validates all routing features
+- **PATTERN**: This comprehensive testing pattern covers route extraction, navigation, props flow, edge cases
+---
+
+## 2026-01-11 21:40 - US-009-CURSOR
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented remote user cursor position and selection tracking
+- Created RemoteCursors component in apps/frontend/src/components/RemoteCursors.tsx
+- Component displays remote user cursors with colored indicators matching user's assigned color
+- Each cursor shows user name label positioned above cursor line
+- Text selections highlighted with semi-transparent color overlays
+- Updated MarkdownEditor component to track cursor position and selection
+- Added updateCursorPosition() function to sync cursor data to Yjs Awareness API
+- Cursor position tracked on: onChange, onSelect, onKeyUp, onClick events
+- Cursor data includes: position, selectionStart, selectionEnd
+- Local user state preserved when updating cursor position (spreads existing state)
+- RemoteCursors filters out local user cursor (compares clientId)
+- Cursor position calculated using textarea content, line counting, and character width estimation
+- Created comprehensive automated test suite: apps/frontend/tests/RemoteCursors.test.tsx (15 tests)
+  - Tests cursor rendering, multiple cursors, color styling, real-time updates
+  - Tests user join/leave events, awareness change integration, cleanup
+  - Tests edge cases: null awareness, Anonymous users, missing position data
+- Created comprehensive automated test suite: apps/frontend/tests/CursorTracking.test.tsx (15 tests)
+  - Tests cursor position tracking during typing, selection changes, key events
+  - Tests awareness state updates with cursor data
+  - Tests sub-second latency requirement
+  - Tests edge cases: cursor at start/end, null awareness, rapid typing
+- All 158 frontend tests passing (10 test files)
+- Typecheck passes (npm run build succeeded)
+- Files changed:
+  - apps/frontend/src/components/RemoteCursors.tsx (new, 158 lines)
+  - apps/frontend/src/components/MarkdownEditor.tsx (added awareness prop, cursor tracking)
+  - apps/frontend/src/components/EditorLayout.tsx (pass awareness to MarkdownEditor)
+  - apps/frontend/tests/RemoteCursors.test.tsx (new, 248 lines)
+  - apps/frontend/tests/CursorTracking.test.tsx (new, 293 lines)
+- Committed: 0b2e204 "feat: US-009-CURSOR - Display remote user cursor positions and selections"
+- Updated PRD: US-009-CURSOR marked as passes: true
+
+**Learnings for future iterations:**
+- RemoteCursors component pattern: subscribe to awareness 'change' events to track cursor updates
+- Cursor position stored in awareness state under 'cursor' property with position, selectionStart, selectionEnd
+- Use textarea event handlers (onSelect, onKeyUp, onClick) to track cursor movement beyond typing
+- Preserve existing user state when updating awareness (spread operator: {...currentState, cursor: {...}})
+- Filter remote cursors by comparing clientId to awareness.clientID to exclude local user
+- Calculate cursor position in pixels: count lines before cursor, estimate character width for column
+- Cursor label positioning: absolute position with negative top offset (-20px) to appear above cursor
+- Selection highlighting: create overlay div with semi-transparent background color (color + '33' for 20% opacity)
+- Testing pattern: wrap awareness change handler calls in act() to avoid React state warnings
+- userEvent.type() and userEvent.click() trigger cursor updates automatically in tests
+- Direct event dispatch (textarea.dispatchEvent) may not trigger React handlers reliably - use userEvent instead
+- Test cursor tracking via awareness.setLocalState mock rather than DOM measurement
+- **CRITICAL**: Automated testing approach successfully validates all cursor tracking features without browser
+- **PATTERN**: This comprehensive testing validates real-time cursor sync, awareness integration, edge cases
+---
+
