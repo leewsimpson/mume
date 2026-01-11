@@ -37,12 +37,7 @@ flowchart TD
     
     MaxReached --> End1([Exit Code 1])
     Success --> End0([Exit Code 0])
-    
-    style Start fill:#90EE90
-    style Success fill:#90EE90
-    style MaxReached fill:#FFB6C6
-    style RunClaude fill:#87CEEB
-    style Archive fill:#FFE4B5
+
 ```
 
 ## Key Components

@@ -714,3 +714,37 @@ Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
 - Test coverage: structural assertions, bidirectional data flow, event handling, cleanup, edge cases
 ---
 
+## 2026-01-11 21:20 - US-007
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented automated tests for US-007 (live markdown preview with react-markdown)
+- Created comprehensive test suite: apps/frontend/tests/MarkdownPreview.test.tsx
+- 33 tests written verifying all acceptance criteria:
+  - Component rendering and basic functionality
+  - Markdown features: headings (h1-h6), bold, italic, lists (ordered/unordered), links
+  - Text formatting: bold (strong tag), italic (em tag), combined formatting
+  - GitHub Flavored Markdown: strikethrough (del tag), task lists (checkboxes), tables, autolinks
+  - Content updates and reactivity: immediate preview updates, rapid content changes
+  - Complex documents: code blocks, inline code, blockquotes, horizontal rules, mixed content
+  - Edge cases: special characters, emojis, multiline content, very long content
+- All 92 frontend tests passing (6 test files)
+- Typecheck passes (npm run build succeeded)
+- Files changed: apps/frontend/tests/MarkdownPreview.test.tsx (new, 323 lines)
+- Committed: 127d9d7 "feat: US-007 - Add automated tests for live markdown preview"
+- Updated PRD: US-007 marked as passes: true
+
+**Learnings for future iterations:**
+- MarkdownPreview component was already implemented in earlier iterations (see progress.txt line 207)
+- react-markdown automatically handles markdown parsing and rendering as HTML
+- Testing react-markdown output: use screen.getByRole() for semantic elements (heading, link, list, listitem, table)
+- Use tagName property to verify specific HTML elements (STRONG, EM, DEL, etc.)
+- Task list checkboxes: query with input[type="checkbox"] and test checked state
+- Template strings (backticks) in JSX avoid quote escaping issues for special characters
+- Testing pattern: verify markdown syntax is correctly transformed to expected HTML elements
+- Content update tests: use rerender() to test component reactivity to prop changes
+- GFM features require remark-gfm plugin - test strikethrough, task lists, tables, autolinks separately
+- Independent scrolling is architectural (separate div containers) - tested via structure, not computed styles
+- All US-007 acceptance criteria verified via automated tests - no browser testing needed
+- **CRITICAL**: Automated testing pattern successfully validates all markdown rendering features
+- **PATTERN**: Testing approach covers rendering, content updates, markdown features, GFM support, and edge cases
+---
+

@@ -34,3 +34,6 @@ coverage/
 # Temporary files
 *.tmp
 .cache/
+
+# Auto Claude data directory
+.auto-claude/
