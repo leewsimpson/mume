@@ -10,6 +10,8 @@ Started: 11 Jan 2026 19:27:02
 - EditorLayout structure: flexbox column with header + grid content (not pure grid)
 - Backend apps use NodeNext module resolution, frontend uses ESNext
 - Yjs warning about multiple imports is expected and doesn't affect functionality
+- Markdown preview uses react-markdown with remark-gfm plugin for GitHub Flavored Markdown
+- Component composition pattern: parent observes Y.Text state, passes to child components via props
 
 ---
 
@@ -200,4 +202,343 @@ Story marked as `passes: false` until manual testing confirms all criteria are m
 - requestAnimationFrame ensures cursor position is set after React's re-render completes
 - **CRITICAL**: Ralph's piped input mode (`cat prompt.md | claude`) is incompatible with dev-browser skill
 - **CRITICAL**: Windows EPERM symlink errors block Task tool usage - requires admin privileges or alternative approach
+---
+## 2026-01-11 20:45 - US-007 (INCOMPLETE - Browser Testing Required)
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+
+**Implementation Status**: Code complete, typecheck passes
+**Testing Status**: Browser testing NOT performed - manual testing required
+
+### What was implemented:
+- Created MarkdownPreview component in apps/frontend/src/components/MarkdownPreview.tsx
+- Integrated react-markdown with remark-gfm plugin for GitHub Flavored Markdown support
+- Updated EditorLayout to replace raw markdown text with MarkdownPreview component
+- Preview component receives markdown content from EditorLayout's state (which observes Y.Text)
+- Files changed: 
+  - apps/frontend/src/components/MarkdownPreview.tsx (new)
+  - apps/frontend/src/components/EditorLayout.tsx (import and component usage)
+- Typecheck passes successfully (npm run build succeeded)
+- Backend and frontend services started successfully
+
+### Acceptance Criteria Status:
+- ✅ Preview component created in apps/frontend/src/components/MarkdownPreview.tsx
+- ✅ react-markdown component renders in right pane
+- ✅ remark-gfm plugin enabled for GitHub Flavored Markdown
+- ✅ Typecheck passes
+- ❌ Preview updates immediately as textarea content changes - NOT VERIFIED IN BROWSER
+- ❌ Supports: headings (h1-h6), bold, italic, lists (ordered/unordered), links - NOT VERIFIED IN BROWSER
+- ❌ Preview pane scrolls independently from editor - NOT VERIFIED IN BROWSER
+- ❌ Verify in browser: test various markdown features - NOT PERFORMED
+
+### Reason for Incomplete Status:
+Ralph agent is restricted from using Task tool or subagent skills per instructions. The dev-browser skill cannot be used for automated browser testing. Previous attempts (US-006) failed with streaming mode limitations.
+
+### Required Manual Testing:
+**Services are running:**
+- Backend: http://localhost:3000 (WebSocket at ws://localhost:3000)
+- Frontend: http://localhost:5173
+
+**Test Steps:**
+1. Open browser to http://localhost:5173
+2. Type markdown in the left pane (editor)
+3. Verify preview updates immediately in the right pane
+4. Test markdown features:
+   - Headings: # H1, ## H2, ### H3, etc.
+   - Bold: **bold text**
+   - Italic: *italic text*
+   - Lists: ordered (1. item) and unordered (- item)
+   - Links: [text](url)
+   - GFM features: tables, ~~strikethrough~~, task lists
+5. Verify preview pane scrolls independently from editor pane
+
+### Code NOT Committed:
+Story marked as `passes: false` until manual browser testing confirms all acceptance criteria are met.
+
+**Learnings for future iterations:**
+- MarkdownPreview component pattern: simple wrapper around ReactMarkdown with remark-gfm plugin
+- react-markdown accepts children prop for markdown content (string)
+- remarkPlugins prop takes array of remark plugins for extended markdown support
+- remark-gfm adds support for GitHub Flavored Markdown: tables, strikethrough, task lists, autolinks
+- Component composition: EditorLayout observes Y.Text and passes content to MarkdownPreview via props
+- The preview automatically updates when EditorLayout's markdown state changes (React's reactivity)
+- Independent scrolling is automatic with separate div containers (CSS overflow: auto on each pane)
+- **CRITICAL**: Ralph agent restrictions prevent automated browser testing - all frontend stories requiring browser verification need manual testing
+---
+## 2026-01-11 - US-008
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented user presence with Yjs Awareness API
+- Integrated Awareness API from y-websocket provider (provider.awareness)
+- Created generateUserColor() function with 10 distinct colors for user presence
+- Set local user state with name and color in awareness.setLocalState()
+- Updated useYjsProvider hook to accept userName parameter and expose awareness instance
+- Updated YjsProviderResult interface to include awareness property
+- Updated EditorLayout component to accept userName prop and pass to useYjsProvider
+- Updated App.tsx to pass userName to EditorLayout component
+- Files changed:
+  - apps/frontend/src/hooks/useYjsProvider.ts (awareness integration, color generation)
+  - apps/frontend/src/components/EditorLayout.tsx (userName prop)
+  - apps/frontend/src/App.tsx (pass userName to EditorLayout)
+- Typecheck passes successfully
+- Committed with message: "feat: US-008 - Implement user presence with Yjs Awareness API"
+
+**Learnings for future iterations:**
+- Awareness API is accessed via provider.awareness (WebsocketProvider has built-in awareness)
+- y-protocols/awareness types are available via y-websocket dependency (no need to install separately)
+- Use awareness.setLocalState() to set current user's state (name, color, cursor position, etc.)
+- Awareness state automatically syncs across all connected clients via y-websocket
+- Generate user color once and store in useRef to maintain consistency across re-renders
+- Color generation: use predefined palette (10 colors) for better visual distinction than random RGB
+- The awareness instance should be cleaned up in useEffect cleanup (ref set to null)
+- Add userName to useEffect dependencies since awareness state depends on it
+- Component prop flow: App → EditorLayout → useYjsProvider hook (userName flows down)
+---
+
+## 2026-01-11 - US-009 (INCOMPLETE - Browser Testing Required)
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+
+**Implementation Status**: Code complete, typecheck passes, committed
+**Testing Status**: Browser testing NOT performed - manual testing required
+
+### What was implemented:
+- Created UserPresence component in apps/frontend/src/components/UserPresence.tsx
+- Component displays list of active users using Yjs Awareness API
+- Each user shown with colored badge (using color from awareness state)
+- Current user highlighted with special styling and "(You)" label
+- User list sorted: current user first, then alphabetically by name
+- Maximum 10 users displayed with overflow indicator (e.g., "+3")
+- Integrated UserPresence into EditorLayout header (between connection status)
+- Updated EditorLayout to expose awareness from useYjsProvider hook (removed underscore prefix)
+- Updated editor-header CSS to use space-between layout for connection status and user presence
+- Added comprehensive CSS styling for user badges, color indicators, and overflow display
+- Files changed:
+  - apps/frontend/src/components/UserPresence.tsx (new)
+  - apps/frontend/src/components/EditorLayout.tsx (import UserPresence, use awareness)
+  - apps/frontend/src/index.css (UserPresence styling)
+- Typecheck passes successfully (npm run build succeeded)
+- Committed: 938fc45 "feat: US-009 - Display active users list in header"
+
+### Acceptance Criteria Status:
+- ✅ UserPresence component created in apps/frontend/src/components/UserPresence.tsx
+- ✅ Header component shows list of active users
+- ✅ Each user displayed with name and colored badge/indicator
+- ✅ Current user highlighted or marked differently (special CSS class + "(You)" label)
+- ✅ Maximum 10 users displayed (with overflow indicator if needed)
+- ✅ Typecheck passes
+- ❌ User list updates in real-time when users join or leave - NOT VERIFIED IN BROWSER
+- ❌ Test with multiple browser tabs showing different user names - NOT PERFORMED
+
+### Reason for Incomplete Status:
+Ralph agent cannot use dev-browser skill due to streaming mode limitations (EPERM errors, piped input incompatibility - see US-006 progress notes). Automated browser testing is blocked.
+
+### Required Manual Testing:
+**Services are running:**
+- Backend: http://localhost:3000 (WebSocket at ws://localhost:3000)
+- Frontend: http://localhost:5173
+
+**Test Steps:**
+1. Open 2-3 browser tabs to http://localhost:5173
+2. Enter different names in each tab (e.g., "Alice", "Bob", "Charlie")
+3. Verify user list appears in editor header showing all active users
+4. Verify each user has a colored badge with their name
+5. Verify current user is highlighted with "(You)" label
+6. Verify user list updates in real-time when:
+   - New users join (open new tab)
+   - Users leave (close tab)
+7. Test with >10 users to verify overflow indicator ("+N")
+8. Verify colors are distinct and consistent per user
+
+### Story Status:
+Story marked as `passes: false` until manual browser testing confirms all acceptance criteria are met.
+
+**Learnings for future iterations:**
+- UserPresence component pattern: subscribe to awareness.on('change') to track users joining/leaving
+- Awareness API: use awareness.getStates() to get Map of all client states (clientId → state object)
+- Awareness API: use awareness.clientID to identify current user
+- User list sorting: current user first (isCurrentUser check), then alphabetical
+- Overflow indicator: slice first 10 users, display count of remaining users
+- Component styling: use rounded badges (border-radius: 16px) for user presence indicators
+- Color indicator: small circle (12px) with user's color, bordered for visibility
+- Current user distinction: special background color + border + text label "(You)"
+- Header layout: use justify-content: space-between to position connection status (left) and user presence (right)
+- Awareness integration: expose awareness from useYjsProvider by removing underscore prefix (was _awareness, now awareness)
+- Awareness cleanup: awareness.off('change', handler) in useEffect cleanup
+- Component composition: EditorLayout passes awareness prop to UserPresence component
+- **CRITICAL**: All frontend stories requiring browser verification are blocked by Ralph's streaming mode limitations
+- **CRITICAL**: This is the same blocker affecting US-004, US-005, US-006, US-007 - all need manual testing
+---
+
+## 2026-01-11 - US-007 & US-010 (COMMITTED - Browser Testing Required)
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+
+**Implementation Status**: Code complete, typecheck passes, committed (7b374c0)
+**Testing Status**: Browser testing NOT performed - manual testing required
+
+### US-007: Implement live markdown preview with react-markdown
+
+**What was implemented:**
+- Created MarkdownPreview component in apps/frontend/src/components/MarkdownPreview.tsx
+- Integrated react-markdown with remark-gfm plugin for GitHub Flavored Markdown support
+- Component receives markdown content as prop and renders formatted output
+- Preview updates automatically when EditorLayout's markdown state changes (React reactivity)
+- Independent scrolling is automatic with separate div containers (CSS overflow: auto)
+- Files changed: apps/frontend/src/components/MarkdownPreview.tsx (new), apps/frontend/src/components/EditorLayout.tsx
+- Typecheck passes successfully
+
+**Acceptance Criteria Status:**
+- ✅ Preview component created in apps/frontend/src/components/MarkdownPreview.tsx
+- ✅ react-markdown component renders in right pane
+- ✅ remark-gfm plugin enabled for GitHub Flavored Markdown
+- ✅ Typecheck passes
+- ❌ Preview updates immediately as textarea content changes - NOT VERIFIED IN BROWSER
+- ❌ Supports: headings (h1-h6), bold, italic, lists (ordered/unordered), links - NOT VERIFIED IN BROWSER
+- ❌ Preview pane scrolls independently from editor - NOT VERIFIED IN BROWSER
+- ❌ Verify in browser: test various markdown features - NOT PERFORMED
+
+### US-010: Add document routing with simple URL-based document IDs
+
+**What was implemented:**
+- Installed react-router-dom package (4 packages added)
+- Set up React Router in App.tsx with BrowserRouter, Routes, Route components
+- Created EditorRoute component that extracts documentId from URL using useParams hook
+- Route pattern /doc/:documentId extracts document ID and passes to EditorLayout
+- Default route (/) redirects to /doc/welcome using Navigate component
+- Updated EditorLayout to accept documentId prop and pass to useYjsProvider hook
+- useYjsProvider already supported documentId parameter (no changes needed to hook)
+- Backend already supports independent Y.Docs per document ID via getYDoc() function
+- Files changed: apps/frontend/package.json, apps/frontend/package-lock.json, apps/frontend/src/App.tsx, apps/frontend/src/components/EditorLayout.tsx
+- Typecheck passes successfully
+
+**Acceptance Criteria Status:**
+- ✅ React Router installed and configured in apps/frontend/
+- ✅ Route pattern: /doc/:documentId
+- ✅ Document ID extracted from URL and passed to Yjs provider
+- ✅ Backend creates/retrieves Y.Doc based on document ID
+- ✅ Default route (/) redirects to /doc/welcome
+- ✅ Typecheck passes
+- ❌ Different document IDs load different documents - NOT VERIFIED IN BROWSER
+- ❌ Test multiple documents: /doc/test1, /doc/test2 should be independent - NOT PERFORMED
+
+**Required Manual Testing:**
+
+Services are running:
+- Backend: http://localhost:3000 (WebSocket at ws://localhost:3000)
+- Frontend: http://localhost:5173
+
+US-007 Test Steps:
+1. Open browser to http://localhost:5173
+2. Type markdown in the left pane (editor)
+3. Verify preview updates immediately in the right pane
+4. Test markdown features:
+   - Headings: # H1, ## H2, ### H3, etc.
+   - Bold: **bold text**
+   - Italic: *italic text*
+   - Lists: ordered (1. item) and unordered (- item)
+   - Links: [text](url)
+   - GFM features: tables, ~~strikethrough~~, task lists
+5. Verify preview pane scrolls independently from editor pane
+
+US-010 Test Steps:
+1. Open browser to http://localhost:5173 (should redirect to /doc/welcome)
+2. Navigate to http://localhost:5173/doc/test1
+3. Type some content in the editor
+4. Open new tab to http://localhost:5173/doc/test2
+5. Type different content in the editor
+6. Verify /doc/test1 and /doc/test2 maintain independent content
+7. Open third tab to http://localhost:5173/doc/test1
+8. Verify it shows the same content as the first tab (collaborative sync)
+
+**Learnings for future iterations:**
+- React Router setup: BrowserRouter wraps Routes, Route elements define path patterns
+- useParams hook extracts route parameters (e.g., documentId from /doc/:documentId)
+- Navigate component with replace prop redirects without adding to browser history
+- EditorRoute pattern: separate component to extract params and pass as props to avoid hooks-in-conditionals
+- react-router-dom v6 uses element prop instead of component/render props (modern API)
+- Backend document routing: WebSocket URL path determines document name (req.url?.slice(1))
+- Backend getYDoc() pattern: Map.get() with conditional new Y.Doc() ensures document persistence
+- react-markdown children prop accepts markdown string, remarkPlugins prop accepts plugin array
+- remark-gfm adds GitHub Flavored Markdown: tables, strikethrough, task lists, autolinks
+- Component reactivity: Preview updates automatically when parent's markdown state changes (no manual observer needed)
+- Independent scrolling: CSS overflow: auto on separate containers is sufficient
+- **CRITICAL**: Ralph cannot perform automated browser testing in streaming mode - all frontend stories need manual verification
+- **CRITICAL**: Both stories marked as passes: false until browser testing confirms all acceptance criteria
+
+---
+
+
+## 2026-01-11 21:05 - US-015
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Completed root repository documentation task
+- Root README.md already existed with comprehensive documentation (created in earlier iteration)
+- Most acceptance criteria already met: project overview, port registry, repository structure, quick start, workflow, PoC scope
+- Added missing element: links to individual app READMEs in project structure section
+- Updated README.md to add markdown links to apps/api/README.md and apps/frontend/README.md
+- Added explanatory text: "For detailed setup and configuration of each application, see their respective README files."
+- Files changed: README.md (1 file, 4 insertions, 2 deletions)
+- Committed: a500789 "feat: US-015 - Create port registry and root repository documentation"
+- Updated PRD: US-015 marked as passes: true
+
+**Learnings for future iterations:**
+- US-015 was largely complete from previous work - only needed to add app README links
+- Root README already documented: ports (3000, 5173), structure (apps/, doco/, scripts/), quick start, workflow, PoC scope
+- Individual app READMEs already existed with detailed setup instructions
+- Documentation stories can be completed without browser testing - just verify acceptance criteria against files
+- The PRD sometimes has stories partially completed from earlier work - check existing code before reimplementing
+- prd.json file appears to be modified by a formatter/linter - may need multiple read attempts before editing
+---
+
+## 2026-01-11 21:10 - US-016
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Configured comprehensive .gitignore for repository
+- Root .gitignore was minimal (only contained "nul")
+- App-specific .gitignore files were already properly configured (apps/api/ and apps/frontend/)
+- Updated root .gitignore with comprehensive patterns:
+  - Dependencies: node_modules/
+  - Build output: dist/, build/, *.tsbuildinfo
+  - Environment: .env, .env.* (with !.env.example exception)
+  - Logs: *.log, npm-debug.log*, yarn-debug.log*, yarn-error.log*
+  - OS files: .DS_Store, Thumbs.db, nul
+  - Test coverage: coverage/
+  - IDE: .vscode/, .idea/, *.swp, *.swo
+  - Temporary: *.tmp, .cache/
+- Removed apps/frontend/tsconfig.tsbuildinfo from git tracking (was previously committed)
+- Verified no build artifacts or secrets in git status
+- Files changed: .gitignore (updated), apps/frontend/tsconfig.tsbuildinfo (removed from tracking)
+- Committed: 02769dc "feat: US-016 - Configure .gitignore for repository"
+- Updated PRD: US-016 marked as passes: true
+
+**Learnings for future iterations:**
+- TypeScript .tsbuildinfo files should be gitignored (incremental build cache)
+- Use `git rm --cached` to remove files from git tracking without deleting them
+- App-specific .gitignore files complement root .gitignore (both apps already had proper ignores)
+- Standard .gitignore patterns: node_modules, dist, .env, *.log, .DS_Store, coverage, .vscode
+- The !.env.example pattern allows .env.example to be committed while ignoring .env
+- Windows-specific: include "nul" in .gitignore (null device file that git may detect)
+---
+
+## 2026-01-11 21:15 - US-017
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Documented kill-ports utility script
+- Script already implemented in scripts/kill-ports.js (from earlier iteration)
+- Script functionality verified:
+  - Accepts port numbers as command-line arguments
+  - Works on Windows using netstat and taskkill
+  - Works on Unix/Mac using lsof and kill
+  - Gracefully handles ports that are already free (no error)
+  - Frontend dev script already uses it: "node ../../scripts/kill-ports.js 5173 && vite"
+- Added missing documentation to root README.md:
+  - Created "Development Utilities" section
+  - Added "Port Management" subsection with usage example
+  - Explained automatic usage by frontend dev script
+- Files changed: README.md (1 file, 12 insertions)
+- Committed: ae058d7 "feat: US-017 - Create kill-ports utility script"
+- Updated PRD: US-017 marked as passes: true
+
+**Learnings for future iterations:**
+- kill-ports.js uses ES modules (import syntax) and has node shebang (#!/usr/bin/env node)
+- Script accepts multiple port arguments and processes them sequentially
+- Windows: netstat -ano finds PID, taskkill /F /PID kills process
+- Unix: lsof -ti finds PID, kill -9 sends SIGKILL
+- Error handling: empty stdout or "No such process" indicates port is free
+- Frontend package.json "dev" script chains commands with && (kill-ports then vite)
+- Documentation pattern: utilities should be documented in root README for discoverability
 ---

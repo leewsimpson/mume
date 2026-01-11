@@ -6,7 +6,7 @@ echo Checking for administrator privileges...
 net session >nul 2>&1
 if %errorLevel% == 0 (
     echo Running with administrator privileges
-    bash -c "cd /c/Github/multi-user-markdown-editor/scripts/ralph && ./ralph.sh %1"
+    bash -c "./ralph.sh %1"
 ) else (
     echo This script requires administrator privileges to create symlinks on Windows.
     echo Please run as Administrator or use ralph-v2.sh which doesn't require admin.
@@ -15,3 +15,6 @@ if %errorLevel% == 0 (
     pause
     exit /b 1
 )
+
+
+pause

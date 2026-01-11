@@ -7,6 +7,7 @@ MAX_ITERATIONS=${1:-10}
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PRD_FILE="$SCRIPT_DIR/prd.json"
 PROGRESS_FILE="$SCRIPT_DIR/progress.txt"
+STREAM_FILE="$SCRIPT_DIR/stream.txt"
 ARCHIVE_DIR="$SCRIPT_DIR/archive"
 LAST_BRANCH_FILE="$SCRIPT_DIR/.last-branch"
 
@@ -51,8 +52,13 @@ if [ ! -f "$PROGRESS_FILE" ]; then
   echo "Started: $(date)" >> "$PROGRESS_FILE"
   echo "---" >> "$PROGRESS_FILE"
 fi
+# Initialize stream file
+echo "Ralph Stream Log - Started: $(date)" > "$STREAM_FILE"
+echo "Monitor with: tail -f stream.txt" >> "$STREAM_FILE"
+echo "═══════════════════════════════════════════════════════" >> "$STREAM_FILE"
 
 echo "Starting Ralph - Max iterations: $MAX_ITERATIONS"
+echo "Stream output: $STREAM_FILE (run: tail -f $STREAM_FILE)"
 
 for i in $(seq 1 $MAX_ITERATIONS); do
   echo ""
@@ -60,8 +66,18 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   echo "  Ralph Iteration $i of $MAX_ITERATIONS"
   echo "═══════════════════════════════════════════════════════"
   
-  # Run amp with the ralph prompt
-  OUTPUT=$(cat "$SCRIPT_DIR/prompt.md" | claude --dangerously-skip-permissions 2>&1 | tee /dev/stderr) || true
+  # Log iteration header to stream
+  echo "" >> "$STREAM_FILE"
+  echo "═══════════════════════════════════════════════════════" >> "$STREAM_FILE"
+  echo "  Ralph Iteration $i of $MAX_ITERATIONS - $(date)" >> "$STREAM_FILE"
+  echo "═══════════════════════════════════════════════════════" >> "$STREAM_FILE"
+  
+  # Run Claude and send detailed output to stream.txt (not console)
+  # Use input redirection instead of pipe to avoid streaming mode
+  claude --dangerously-skip-permissions < "$SCRIPT_DIR/prompt.md" >> "$STREAM_FILE" 2>&1 || true
+  
+  # Read last part of stream to check for completion signal
+  OUTPUT=$(tail -n 100 "$STREAM_FILE")
   
   # Check for completion signal
   if echo "$OUTPUT" | grep -q "<promise>COMPLETE</promise>"; then

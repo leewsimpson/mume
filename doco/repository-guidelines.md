@@ -289,39 +289,7 @@ try {
 }
 ```
 
-## Testing Strategy
-
-### Three-Tier Testing Architecture
-
-**1. Unit/Integration Tests** (Co-located with app: `apps/{app}/tests/`)
-- **Framework**: Jest (backend), Vitest (frontend)
-- **Purpose**: Fast, focused tests for business logic and components
-- **Scope**: Single app, isolated units
-- **Execution**: `npm test` from app directory
-
-**2. App-Specific E2E Tests** (Co-located with app: `apps/{app}/tests/e2e/`)
-- **Framework**: Playwright (browser), Supertest (API)
-- **Purpose**: Complete user flows within single app
-- **Scope**: Single app, full stack
-- **Execution**: `npm run test:e2e` from app directory
-
-**3. Cross-App Integration Tests** (Root level: `tests/`)
-- **Framework**: Playwright
-- **Purpose**: Multi-app workflows, authentication flows, end-to-end scenarios
-- **Scope**: Multiple apps, complete system
-- **Execution**: `npx playwright test` from repository root
-
-### Testing Principles
-
-**MUST follow these principles:**
-
-1. **E2E First** - Start with broad end-to-end tests. Fewer tests, higher confidence.
-2. **Align to Requirements** - Each test traces to a user story or requirement
-3. **Mock Only Uncontrollable** - Use Docker for databases/storage. Mock only external APIs.
-4. **Reset State** - Reset database/state before each test for isolation
-5. **Unit Tests Later** - Add focused unit tests only after E2E coverage exists
-6. **Minimise Duplication** - Share test utilities, avoid repeating test logic
-7. **Descriptive Names** - File: `user-authentication.e2e.test.ts`, Test: "should redirect to dashboard after successful login"
+## Testing Notes
 
 ### Test Infrastructure Patterns
 

@@ -10,19 +10,22 @@ You are an autonomous coding agent working on a software project.
 4. Pick the **highest priority** user story where `passes: false`
 5. Implement that single user story **completely**
 6. Run quality checks (e.g., typecheck, lint, test - use whatever your project requires)
-7. **CRITICAL**: Verify ALL acceptance criteria are met (including browser testing if required)
+7. **CRITICAL**: Verify ALL acceptance criteria are met using automated testing
 8. Update AGENTS.md files if you discover reusable patterns (see below)
 9. If **ALL** checks pass AND **ALL** acceptance criteria verified, commit with message: `feat: [Story ID] - [Story Title]`
 10. **ONLY IF FULLY COMPLETE**: Update the PRD to set `passes: true` for the completed story
 11. Append your progress to `progress.txt` with detailed notes
 
+
+### ** NOTE - Although progress suggests that streaming mode can't prohibit the use of testing using the browser, you now need to revise these stories to use automated testing **
+
 ## IMPORTANT: Story Completion Rules
 
 **A story is ONLY complete when:**
 - ✅ All code is written
+- ✅ All tests are written that assert the acceptance criteria (see Testing section)
 - ✅ TypeScript type checking passes
-- ✅ All acceptance criteria are verified
-- ✅ For frontend stories: Browser testing is complete (see Browser Testing section)
+- ✅ All tests pass
 - ✅ Code is committed
 - ✅ NO errors occurred during implementation
 
@@ -97,38 +100,38 @@ Only update AGENTS.md if you have **genuinely reusable knowledge** that would he
 - Keep changes focused and minimal
 - Follow existing code patterns
 
-## Browser Testing (Required for Frontend Stories)
+## Testing
 
-**CRITICAL**: For any story that changes UI, you MUST verify it works in the browser.
+**1. Unit/Integration Tests** (Co-located with app: `apps/{app}/tests/`)
+- **Framework**: Jest (backend), Vitest (frontend)
+- **Purpose**: Fast, focused tests for business logic and components
+- **Scope**: Single app, isolated units
+- **Execution**: `npm test` from app directory
 
-### Process:
-1. **Start the services** (if not already running):
-   - Backend: Check if port 3000 is listening, start if needed
-   - Frontend: Check if port 5173 is listening, start if needed
+**2. App-Specific E2E Tests** (Co-located with app: `apps/{app}/tests/e2e/`)
+- **Framework**: Playwright (browser), Supertest (API)
+- **Purpose**: Complete user flows within single app
+- **Scope**: Single app, full stack
+- **Execution**: `npm run test:e2e` from app directory
 
-2. **Run browser tests**:
-   - Use the `dev-browser` skill to automate browser testing
-   - Navigate to http://localhost:5173
-   - Test ALL acceptance criteria from the story
-   - For collaborative features, test with multiple browser windows/tabs
-   - Take screenshots of key functionality
+**3. Cross-App Integration Tests** (Root level: `tests/`)
+- **Framework**: Playwright
+- **Purpose**: Multi-app workflows, authentication flows, end-to-end scenarios
+- **Scope**: Multiple apps, complete system
+- **Execution**: `npx playwright test` from repository root
 
-3. **Verification Requirements**:
-   - Every acceptance criterion MUST be verified in the browser
-   - If any criterion fails in browser, the story is NOT complete
-   - Document all test results in progress.txt
+### Testing Principles
 
-4. **Error Handling**:
-   - If `dev-browser` skill fails due to streaming mode limitations:
-     - Document in progress notes that browser testing could not be automated
-     - Add a note in PRD explaining manual testing is required
-     - Do NOT mark `passes: true` - leave it as `false` with notes
-   - If browser testing reveals bugs:
-     - Fix the bugs immediately
-     - Re-test until all criteria pass
-     - Document the fixes in progress.txt
+**MUST follow these principles:**
 
-**A frontend story is NEVER complete without successful browser verification.**
+1. **E2E First** - Start with broad end-to-end tests. Fewer tests, higher confidence.
+2. **Align to Requirements** - Each test traces to a user story or requirement
+3. **Mock Only Uncontrollable** - Use Docker for databases/storage. Mock only external APIs.
+4. **Reset State** - Reset database/state before each test for isolation
+5. **Unit Tests Later** - Add focused unit tests only after E2E coverage exists
+6. **Minimise Duplication** - Share test utilities, avoid repeating test logic
+7. **Descriptive Names** - ie: File: `user-authentication.e2e.test.ts`, Test: "should redirect to dashboard after successful login"
+
 
 ## Stop Condition
 
