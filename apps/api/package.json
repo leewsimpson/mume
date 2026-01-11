@@ -1,0 +1,30 @@
+{
+  "name": "@multi-user-markdown-editor/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Backend API server for multi-user collaborative markdown editor",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "yjs": "^13.6.10",
+    "y-websocket": "^1.5.0",
+    "ws": "^8.16.0",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/ws": "^8.5.10",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^20.11.5",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0"
+  }
+}

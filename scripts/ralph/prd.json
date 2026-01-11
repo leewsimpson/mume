@@ -1,0 +1,298 @@
+{
+  "project": "Multi-User Markdown Editor",
+  "branchName": "ralph/poc-collaborative-editor",
+  "description": "PoC Phase - Real-time collaborative markdown editor with Yjs, proving multi-user editing works",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Initialize backend API application structure",
+      "description": "As a developer, I need a properly structured backend application in apps/api/ following repository guidelines.",
+      "acceptanceCriteria": [
+        "Directory created: apps/api/",
+        "Project initialized with package.json in apps/api/",
+        "TypeScript configured with backend standards from guidelines (target: ES2022, module: NodeNext, strict: true, etc.)",
+        "Dependencies installed: express, yjs, y-websocket, ws, tsx, typescript, @types packages",
+        "Build scripts follow guidelines: build, start, dev (tsx watch)",
+        "Directory structure: apps/api/src/, apps/api/tests/, apps/api/dist/ (gitignored)",
+        ".env.example created with PORT, NODE_ENV variables documented",
+        "README.md created with app purpose, tech stack, setup instructions",
+        "Typecheck passes (npm run build succeeds)"
+      ],
+      "priority": 1,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-002",
+      "title": "Initialize React frontend application structure",
+      "description": "As a developer, I need a properly structured frontend application in apps/frontend/ following repository guidelines.",
+      "acceptanceCriteria": [
+        "Directory created: apps/frontend/",
+        "React project initialized with Vite and TypeScript in apps/frontend/",
+        "TypeScript configured with frontend standards from guidelines (target: ES2022, module: ESNext, jsx: react-jsx, noEmit: true, strict: true, etc.)",
+        "Dependencies installed: react, react-dom, yjs, y-websocket, react-markdown, remark-gfm, @types packages",
+        "Vite configured: port 5173, strictPort: true, proxy /api to http://localhost:3000",
+        "Build scripts follow guidelines: dev (with port cleanup), build (tsc -b && vite build), preview, test",
+        "Directory structure: apps/frontend/src/, apps/frontend/tests/, apps/frontend/dist/ (gitignored)",
+        ".env.example created with VITE_API_URL variable documented",
+        "README.md created with app purpose, tech stack, setup instructions",
+        "Typecheck passes (npm run build succeeds)"
+      ],
+      "priority": 2,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-003",
+      "title": "Implement Express server with y-websocket integration",
+      "description": "As a developer, I need the backend to serve WebSocket connections for real-time collaboration.",
+      "acceptanceCriteria": [
+        "Express server created in apps/api/src/server.ts listening on port 3000",
+        "y-websocket server integrated with Express",
+        "In-memory document store created: Map<string, Y.Doc>",
+        "Server creates/retrieves Y.Doc based on document room name",
+        "CORS configured to allow frontend origin (http://localhost:5173)",
+        "Server starts successfully: npm run dev from apps/api/",
+        "WebSocket endpoint accessible at ws://localhost:3000",
+        "Typecheck passes"
+      ],
+      "priority": 3,
+      "passes": true,
+      "notes": ""
+    },
+    {
+      "id": "US-004",
+      "title": "Create simple name-based authentication flow",
+      "description": "As a user, I want to enter my name to start editing so that I can quickly test collaborative editing.",
+      "acceptanceCriteria": [
+        "Landing page component created in apps/frontend/src/components/NamePrompt.tsx",
+        "Name input field with validation (min 2 characters)",
+        "Name stored in sessionStorage on submit",
+        "User redirected to editor after entering name",
+        "Name persists during browser session",
+        "No password required (PoC only)",
+        "Typecheck passes",
+        "Verify in browser: npm run dev from apps/frontend/"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "Implementation complete, typecheck passes. Browser verification NOT performed - requires manual testing to confirm name prompt UI works correctly and sessionStorage persistence."
+    },
+    {
+      "id": "US-004",
+      "title": "Create split-pane editor layout with textarea and preview",
+      "description": "As a user, I want a clean editor interface with markdown source on the left and preview on the right.",
+      "acceptanceCriteria": [
+        "EditorLayout component created in apps/frontend/src/components/EditorLayout.tsx",
+        "Split-pane layout (50/50 left/right) using CSS Grid or Flexbox",
+        "Left pane contains textarea for markdown editing",
+        "Right pane contains preview area",
+        "Layout is responsive and fills viewport",
+        "Resizable divider between panes (optional for PoC)",
+        "Typecheck passes",
+        "Verify in browser: npm run dev from apps/frontend/"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "Implementation complete, typecheck passes. Browser verification NOT performed - requires manual testing to confirm split-pane layout displays correctly and fills viewport."
+    },
+    {
+      "id": "US-005",
+      "title": "Integrate Yjs WebSocket provider with backend",
+      "description": "As a developer, I need to connect the frontend to the backend via Yjs WebSocket for real-time sync.",
+      "acceptanceCriteria": [
+        "Yjs provider hook created in apps/frontend/src/hooks/useYjsProvider.ts",
+        "y-websocket provider initialized connecting to ws://localhost:3000",
+        "Y.Doc instance created on frontend",
+        "Y.Text type created and bound to shared document",
+        "WebSocket connection established successfully",
+        "Connection status visible in UI (connected/disconnected)",
+        "Typecheck passes",
+        "Verify in browser: npm run dev from apps/frontend/"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "Implementation complete, typecheck passes. Browser verification NOT performed - requires manual testing to confirm WebSocket connects successfully and connection status indicator displays correctly."
+    },
+    {
+      "id": "US-006",
+      "title": "Bind Yjs Y.Text to textarea for bidirectional sync",
+      "description": "As a user, I want my typing to sync in real-time with other users editing the same document.",
+      "acceptanceCriteria": [        "Editor component created in apps/frontend/src/components/MarkdownEditor.tsx",        "Textarea value updates when Y.Text changes",
+        "Y.Text updates when user types in textarea",
+        "Cursor position preserved during sync",
+        "No infinite update loops",
+        "Multiple browser tabs show synchronized content within 1 second",
+        "Typecheck passes",
+        "Test with 2-3 browser tabs/windows simultaneously"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Implementation complete but browser testing failed due to streaming mode limitations (EPERM symlink errors, dev-browser skill incompatible with piped input). Manual browser testing required to verify multi-tab sync behavior and cursor position preservation."
+    },
+    {
+      "id": "US-007",
+      "title": "Implement live markdown preview with react-markdown",
+      "description": "As a user, I want to see formatted markdown output in real-time as I type.",
+      "acceptanceCriteria": [        "Preview component created in apps/frontend/src/components/MarkdownPreview.tsx",        "react-markdown component renders in right pane",
+        "Preview updates immediately as textarea content changes",
+        "Supports: headings (h1-h6), bold, italic, lists (ordered/unordered), links",
+        "remark-gfm plugin enabled for GitHub Flavored Markdown",
+        "Preview pane scrolls independently from editor",
+        "Typecheck passes",
+        "Verify in browser: test various markdown features"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-008",
+      "title": "Implement user presence with Yjs Awareness API",
+      "description": "As a user, I want to see who else is currently editing the document.",
+      "acceptanceCriteria": [
+        "Yjs Awareness API integrated from y-websocket provider",
+        "Each user assigned a random distinct color on join",
+        "Local user state includes: name, color",
+        "Awareness state syncs across all connected clients",
+        "Typecheck passes"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-009",
+      "title": "Display active users list in header",
+      "description": "As a user, I want to see the names and colors of all users currently editing the document.",
+      "acceptanceCriteria": [        "UserPresence component created in apps/frontend/src/components/UserPresence.tsx",        "Header component shows list of active users",
+        "Each user displayed with name and colored badge/indicator",
+        "User list updates in real-time when users join or leave",
+        "Current user highlighted or marked differently",
+        "Maximum 10 users displayed (with overflow indicator if needed)",
+        "Typecheck passes",
+        "Test with multiple browser tabs showing different user names"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-010",
+      "title": "Add document routing with simple URL-based document IDs",
+      "description": "As a developer, I need URL routing to support multiple documents for testing.",
+      "acceptanceCriteria": [        "React Router installed and configured in apps/frontend/",        "Route pattern: /doc/:documentId",
+        "Document ID extracted from URL and passed to Yjs provider",
+        "Backend creates/retrieves Y.Doc based on document ID",
+        "Different document IDs load different documents",
+        "Default route (/) redirects to /doc/welcome or shows document selector",
+        "Typecheck passes",
+        "Test multiple documents: /doc/test1, /doc/test2 should be independent"
+      ],
+      "priority": 11,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-011",
+      "title": "Add connection status indicator",
+      "description": "As a user, I want to know if I'm connected to the server or if there are sync issues.",
+      "acceptanceCriteria": [        "ConnectionStatus component created in apps/frontend/src/components/ConnectionStatus.tsx",        "Connection status indicator visible in UI (e.g., header)",
+        "Shows 'Connected' state with green indicator when WebSocket connected",
+        "Shows 'Disconnected' state with red indicator when connection lost",
+        "Shows 'Connecting...' state during reconnection attempts",
+        "Indicator updates in real-time based on WebSocket state",
+        "Typecheck passes",
+        "Test by stopping backend server and verifying disconnect indicator"
+      ],
+      "priority": 12,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-012",
+      "title": "Add basic error handling and reconnection logic",
+      "description": "As a user, I want the editor to automatically reconnect if my connection drops.",
+      "acceptanceCriteria": [
+        "WebSocket reconnects automatically on connection loss",
+        "Exponential backoff for reconnection attempts (1s, 2s, 4s, 8s, max 30s)",
+        "User sees reconnection status in UI",
+        "Document state preserved during disconnect (queued changes)",
+        "Changes sync successfully after reconnection",
+        "Error messages displayed for critical failures",
+        "Typecheck passes"
+      ],
+      "priority": 13,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-014",
+      "title": "Add basic styling and UI polish",
+      "description": "As a user, I want a clean, usable interface for the PoC demonstration.",
+      "acceptanceCriteria": [
+        "Global styles created in apps/frontend/src/index.css",
+        "Basic CSS styling applied to all components",
+        "Split-pane layout has visible divider",
+        "Textarea has monospace font for code editing feel",
+        "Preview pane has readable typography (serif or sans-serif)",
+        "Header has clear visual hierarchy",
+        "Colors and spacing are consistent",
+        "Interface is usable and professional-looking",
+        "Responsive design works on desktop (no mobile requirement for PoC)",
+        "Typecheck passes",
+        "Visual review in browser"
+      ],
+      "priority": 14,
+      "passes": false,
+      "notes": ""    },
+    {
+      "id": "US-015",
+      "title": "Create port registry and root repository documentation",
+      "description": "As a developer, I need clear documentation of port allocation and repository structure.",
+      "acceptanceCriteria": [
+        "Root README.md created with project overview",
+        "Port registry documented in README.md: Backend (3000), Frontend (5173)",
+        "Repository structure documented showing apps/, doco/, scripts/",
+        "Quick start instructions for running both apps",
+        "Links to individual app READMEs",
+        "Development workflow documented (how to run locally)",
+        "PoC scope and goals clearly stated"
+      ],
+      "priority": 15,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-016",
+      "title": "Configure .gitignore for repository",
+      "description": "As a developer, I need proper .gitignore configuration to prevent committing build artifacts and secrets.",
+      "acceptanceCriteria": [
+        "Root .gitignore created",
+        "Ignores: node_modules/, dist/, .env (but not .env.example)",
+        "Ignores: *.log, .DS_Store, coverage/, .vscode/ (optional)",
+        "Each app has dist/ and .env properly ignored",
+        "Verify no build artifacts or secrets in git status"
+      ],
+      "priority": 16,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-017",
+      "title": "Create kill-ports utility script",
+      "description": "As a developer, I need a utility to clean up stuck ports during development.",
+      "acceptanceCriteria": [
+        "Script created: scripts/kill-ports.js",
+        "Accepts port number as argument",
+        "Works on Windows (netstat + TaskKill)",
+        "Works on Unix/Mac (lsof + kill)",
+        "Handles cases where port is already free",
+        "Frontend dev script uses it: npm run kill-port before starting Vite",
+        "Documented in root README.md"
+      ],
+      "priority": 17,
+      "passes": false,
+      "notes": ""    }
+  ]
+}

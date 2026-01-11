@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm start)",
+      "Bash(npm run dev:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(taskkill //F //PID 45752)",
+      "Bash(taskkill //F //PID 50988)",
+      "Bash(whoami:*)",
+      "Bash(powershell -Command \"[Security.Principal.WindowsIdentity]::GetCurrent\\(\\).Groups -contains ''S-1-5-32-544''\")",
+      "Bash(echo:*)"
+    ],
+    "additionalDirectories": [
+      "c:\\Github\\multi-user-markdown-editor"
+    ]
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "dev-browser@dev-browser-marketplace": true,
+    "ralph-wiggum@claude-code-plugins": true
+  }
+}

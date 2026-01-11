@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/editorlayout.tsx","./src/components/markdowneditor.tsx","./src/components/nameprompt.tsx","./src/hooks/useyjsprovider.ts"],"version":"5.9.3"}

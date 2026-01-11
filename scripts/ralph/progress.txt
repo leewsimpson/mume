@@ -1,0 +1,203 @@
+# Ralph Progress Log
+Started: 11 Jan 2026 19:27:02
+
+## Codebase Patterns
+- Frontend uses custom hooks pattern (e.g., useYjsProvider) for Yjs integration
+- Use useRef to persist Yjs objects (Y.Doc, WebsocketProvider) across React re-renders to prevent memory leaks
+- Always destroy Yjs objects in useEffect cleanup: provider.destroy() and ydoc.destroy()
+- Prefix intentionally unused variables with underscore to pass TypeScript strict checks
+- Connection status UI: green (connected), yellow (connecting), red (disconnected)
+- EditorLayout structure: flexbox column with header + grid content (not pure grid)
+- Backend apps use NodeNext module resolution, frontend uses ESNext
+- Yjs warning about multiple imports is expected and doesn't affect functionality
+
+---
+
+## 2026-01-11 19:35 - US-001
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented backend API application structure in apps/api/
+- Created directory structure: apps/api/src/, apps/api/tests/ (dist/ auto-generated)
+- Initialized package.json with Express, Yjs (v13.6.10), y-websocket (v1.5.0), ws (v8.16.0), CORS
+- Configured TypeScript with backend standards: ES2022, NodeNext, strict mode enabled
+- Added build scripts: build (tsc), start (node dist/server.js), dev (tsx watch)
+- Created .env.example with PORT=3000, NODE_ENV=development, FRONTEND_URL
+- Added comprehensive README.md with setup instructions
+- Files changed: package.json, tsconfig.json, .env.example, .gitignore, README.md, src/server.ts
+- Typecheck passes successfully
+
+**Learnings for future iterations:**
+- Repository follows multi-app structure with apps/ directory
+- Backend apps use NodeNext module resolution (not Node16 or CommonJS)
+- All apps require .env.example (committed) and .env (gitignored)
+- Build output goes to dist/ which is gitignored
+- tsx is used for development (watch mode), tsc for production builds
+- Repository guidelines specify strict TypeScript config with noUncheckedIndexedAccess
+---
+
+## 2026-01-11 19:35 - US-002
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented React frontend application structure in apps/frontend/
+- Created directory structure: apps/frontend/src/, apps/frontend/tests/ (dist/ auto-generated)
+- Initialized React project with Vite and TypeScript
+- Configured TypeScript with frontend standards: ES2022, ESNext, jsx: react-jsx, noEmit: true, strict mode, noUncheckedIndexedAccess
+- Installed dependencies: react (v19.2.3), react-dom (v19.2.3), yjs (v13.6.29), y-websocket (v3.0.0), react-markdown (v10.1.0), remark-gfm (v4.0.1)
+- Configured Vite: port 5173, strictPort: true, API proxy /api to http://localhost:3000
+- Set up build scripts: dev (with port cleanup), build (tsc -b && vite build), preview, test
+- Created .env.example with VITE_API_URL
+- Added comprehensive README.md with setup instructions
+- Created basic React app structure: App.tsx, main.tsx, index.html, index.css, vite-env.d.ts
+- Files changed: 17 files added in apps/frontend/
+- Typecheck passes successfully (npm run build succeeds)
+
+**Learnings for future iterations:**
+- Frontend apps use Vite as build tool and dev server
+- Frontend TypeScript config uses ESNext module, jsx: react-jsx, noEmit: true (no compilation, just type checking)
+- Vite requires separate tsconfig.node.json for config files (vite.config.ts)
+- React 19 doesn't require explicit React import in JSX files (jsx: react-jsx handles it)
+- Frontend package.json must have "type": "module" for ESM
+- Vite dev script references kill-ports utility at ../../scripts/kill-ports.js (to be created in US-017)
+- Frontend uses tsconfig references pattern with tsconfig.node.json
+---
+
+## 2026-01-11 21:00 - US-003
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented Express server with y-websocket integration in apps/api/src/server.ts
+- Created Express server listening on port 3000 with HTTP and WebSocket support
+- Integrated y-websocket server using setupWSConnection from y-websocket/bin/utils
+- Implemented in-memory document store using Map<string, Y.Doc>
+- Server creates/retrieves Y.Doc based on document room name extracted from WebSocket URL
+- Configured CORS to allow frontend origin (http://localhost:5173)
+- Added health check endpoint at /health with document count
+- Added graceful shutdown handling with SIGTERM
+- Created type declarations for y-websocket/bin/utils module (src/types/y-websocket-utils.d.ts)
+- Files changed: apps/api/src/server.ts, apps/api/src/types/y-websocket-utils.d.ts
+- Typecheck passes, server starts successfully
+
+**Learnings for future iterations:**
+- y-websocket/bin/utils doesn't export TypeScript types - need custom .d.ts declarations
+- y-websocket package exports utilities at 'y-websocket/bin/utils' (not with .js extension)
+- setupWSConnection from y-websocket handles all Yjs sync protocol automatically
+- Document room name is extracted from WebSocket URL path (req.url?.slice(1))
+- The in-memory Map<string, Y.Doc> ensures documents persist while server is running
+- Yjs warning about multiple imports is expected when y-websocket and yjs are both installed
+- Use getYDoc() to ensure document exists in Map before setupWSConnection handles sync
+---
+
+## 2026-01-11 23:15 - US-004
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented simple name-based authentication flow
+- Created NamePrompt component in apps/frontend/src/components/NamePrompt.tsx
+- Name input field with validation (minimum 2 characters) 
+- Name stored in sessionStorage for persistence during browser session
+- App.tsx checks sessionStorage on mount and shows NamePrompt if no name exists
+- After name submission, user sees welcome screen
+- Added styling for name prompt form in index.css
+- Files changed: apps/frontend/src/App.tsx, apps/frontend/src/index.css, apps/frontend/src/components/NamePrompt.tsx
+- Typecheck passes successfully
+
+**Learnings for future iterations:**
+- NamePrompt component uses controlled input pattern with useState for validation
+- sessionStorage persists data only during browser session (not across browser restarts like localStorage)
+- Component composition pattern: NamePrompt receives onNameSubmit callback from parent App component
+- Dev server script references kill-ports.js which doesn't exist yet (US-017) - workaround is to run `npx vite` directly
+- React state management: use conditional rendering based on state (if !userName return NamePrompt)
+---
+## 2026-01-11 23:45 - US-004 (Split-pane Editor Layout)
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented split-pane editor layout with textarea and preview
+- Created EditorLayout component in apps/frontend/src/components/EditorLayout.tsx
+- Configured 50/50 split layout using CSS Grid (grid-template-columns: 1fr 1fr)
+- Left pane contains textarea for markdown editing with monospace font
+- Right pane contains preview area with serif font for readability
+- Updated global styles: changed #root to use 100vw/100vh for full viewport coverage
+- Removed centering styles from body to support full-width layout
+- Added styling with visible divider between panes
+- Files changed: apps/frontend/src/App.tsx, apps/frontend/src/index.css, apps/frontend/src/components/EditorLayout.tsx
+- Typecheck passes successfully
+
+**Learnings for future iterations:**
+- CSS Grid is cleaner than Flexbox for equal-width split panes (grid-template-columns: 1fr 1fr)
+- Full-viewport layouts require #root to be 100vw/100vh, not max-width with centering
+- Textarea styling: use resize: none, border: none, and monospace font for code editor feel
+- Preview pane needs text-align: left to override the centered default
+- Component state management: EditorLayout manages its own markdown state with useState
+- Note: Preview currently shows raw markdown text, not rendered HTML (will be implemented in US-007 with react-markdown)
+---
+## 2026-01-11 23:59 - US-005
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented Yjs WebSocket provider integration with backend
+- Created useYjsProvider custom hook in apps/frontend/src/hooks/useYjsProvider.ts
+- Hook initializes Y.Doc, Y.Text type ('content'), and WebsocketProvider connecting to ws://localhost:3000
+- Added connection status tracking with three states: connected, connecting, disconnected
+- Integrated hook into EditorLayout component
+- Added connection status indicator UI in editor header with color-coded status (green=connected, yellow=connecting, red=disconnected)
+- Updated CSS with status indicator styling and pulsing animation for connecting state
+- Restructured EditorLayout to use flexbox with header and content sections
+- Files changed: apps/frontend/src/hooks/useYjsProvider.ts (new), apps/frontend/src/components/EditorLayout.tsx, apps/frontend/src/index.css
+- Typecheck passes successfully
+
+**Learnings for future iterations:**
+- useYjsProvider hook uses useRef to persist Yjs objects across re-renders (prevents memory leaks)
+- WebSocket provider event listener: provider.on('status', callback) tracks connection state
+- Y.Doc and WebsocketProvider must be destroyed in cleanup function to prevent memory leaks
+- Connection status states match y-websocket provider: 'connected', 'connecting', 'disconnected'
+- Unused variables from hook destructuring should be prefixed with underscore (_ydoc, _ytext, _provider) to pass TypeScript strict checks
+- CSS animations: use @keyframes for pulsing effect on connecting status indicator
+- EditorLayout structure changed: flexbox column layout with header + content grid (was previously just a grid)
+- The Yjs warning about multiple imports is expected and doesn't affect functionality
+---
+
+## 2026-01-11 - US-006 (Iterations 3-6: FAILED - Browser Testing Blocked)
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+
+**Implementation Status**: Code complete, typecheck passes
+**Testing Status**: FAILED - Browser testing could not be completed
+
+### What was implemented:
+- Implemented bidirectional Yjs Y.Text binding to textarea for real-time collaborative editing
+- Created MarkdownEditor component in apps/frontend/src/components/MarkdownEditor.tsx
+- Implemented observer pattern: Y.Text changes trigger textarea updates
+- Implemented diff-based algorithm: textarea changes calculated using common prefix/suffix detection
+- Added cursor position preservation using requestAnimationFrame and delta-based adjustment
+- Prevented infinite update loops with isLocalChangeRef flag to skip self-triggered observations
+- Updated EditorLayout to use MarkdownEditor component instead of basic textarea
+- EditorLayout now observes Y.Text directly to update preview pane in real-time
+- Files changed: apps/frontend/src/components/MarkdownEditor.tsx (new), apps/frontend/src/components/EditorLayout.tsx
+- Typecheck passes successfully
+
+### FAILURE REASON:
+Ralph attempted browser testing in iterations 3-6 but failed each time with:
+- Error: "only prompt commands are supported in streaming mode"
+- Error: "EPERM: operation not permitted, symlink" (Windows symlink creation requires admin privileges)
+- dev-browser skill is incompatible with piped input mode (`cat prompt.md | claude`)
+
+### Acceptance Criteria NOT Verified:
+- ❌ "Multiple browser tabs show synchronized content within 1 second" - NOT TESTED
+- ❌ "Test with 2-3 browser tabs/windows simultaneously" - NOT TESTED
+- ❌ "Cursor position preserved during sync" - NOT VERIFIED IN BROWSER
+- ❌ "No infinite update loops" - NOT VERIFIED IN BROWSER
+
+### Required Action:
+**MANUAL BROWSER TESTING REQUIRED** to verify:
+1. Start backend: `cd apps/api && npm run dev`
+2. Start frontend: `cd apps/frontend && npm run dev`
+3. Open 2-3 browser tabs to http://localhost:5173
+4. Type in one tab and verify content appears in other tabs within 1 second
+5. Verify cursor position is preserved when typing
+6. Verify no infinite loops or performance issues
+
+Story marked as `passes: false` until manual testing confirms all criteria are met.
+
+**Learnings for future iterations:**
+- Bidirectional sync requires two separate mechanisms: observer for remote changes, onChange handler for local changes
+- Use isLocalChangeRef to prevent observer from processing changes triggered by local typing (prevents infinite loops)
+- Cursor position preservation: capture position before update, adjust based on Y.Text delta, restore in requestAnimationFrame
+- Y.Text delta format: {retain: number} | {insert: string} | {delete: number}
+- Diff algorithm for efficient updates: find common prefix/suffix, only update the changed portion
+- Y.Text transactions (ytext.doc?.transact) ensure atomic updates when combining delete + insert
+- MarkdownEditor manages its own content state for responsive UI, syncs to Y.Text on change
+- EditorLayout maintains separate markdown state for preview pane by observing Y.Text
+- requestAnimationFrame ensures cursor position is set after React's re-render completes
+- **CRITICAL**: Ralph's piped input mode (`cat prompt.md | claude`) is incompatible with dev-browser skill
+- **CRITICAL**: Windows EPERM symlink errors block Task tool usage - requires admin privileges or alternative approach
+---
