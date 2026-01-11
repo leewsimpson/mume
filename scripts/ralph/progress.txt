@@ -912,3 +912,60 @@ Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
 - **PATTERN**: This comprehensive testing pattern covers component rendering, state display, real-time updates, CSS classes
 ---
 
+
+## 2026-01-11 21:52 - US-012
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented comprehensive error handling and automatic reconnection logic
+- Enhanced useYjsProvider hook with exponential backoff reconnection strategy:
+  - Exponential backoff: 1s, 2s, 4s, 8s, max 30s (Math.pow(2, attempts - 1) * 1000)
+  - Configured WebSocket provider with maxBackoffTime: 30000ms
+  - Tracks reconnection attempts in state (increments on disconnect, resets on connect)
+  - Schedules reconnection with setTimeout based on calculated backoff time
+- Error tracking and display:
+  - Added error and reconnectAttempts to YjsProviderResult interface
+  - Connection error handler listens for 'connection-error' events
+  - Handles ErrorEvent objects (event.error.message extraction)
+  - Sync event handler ('sync', not 'synced') resets error state when synced
+  - Clears errors on successful connection or reconnection attempts
+- UI enhancements in EditorLayout:
+  - Error banner displays critical connection errors with ⚠️ warning icon
+  - Reconnection info shows "Reconnecting... (attempt N)" during reconnection
+  - Only displays reconnect info when status='connecting' AND reconnectAttempts > 0
+  - CSS styling: error banner (red background rgba(239, 68, 68, 0.15)), reconnect info (yellow background)
+- Document state preservation:
+  - Y.Doc and Y.Text instances persist in useRef across disconnections
+  - Yjs CRDT automatically queues changes during disconnect
+  - Changes sync successfully after reconnection (no data loss)
+- Automated test coverage (11 tests in ErrorHandling.test.tsx):
+  - Error banner display and clearing
+  - Reconnection info display with attempt tracking
+  - State transitions (connected → disconnected → reconnecting)
+  - Multiple error message handling
+  - UI reactivity to prop changes (rerender tests)
+- Files changed:
+  - apps/frontend/src/hooks/useYjsProvider.ts (added error tracking, reconnection logic)
+  - apps/frontend/src/components/EditorLayout.tsx (error banner, reconnect info UI)
+  - apps/frontend/src/index.css (error banner and reconnect info styling)
+  - apps/frontend/tests/ErrorHandling.test.tsx (new, 11 tests)
+- All 191 frontend tests passing (added 11 new tests)
+- Typecheck passes (fixed NodeJS.Timeout → ReturnType<typeof setTimeout>, Error → ErrorEvent, 'synced' → 'sync')
+- Committed: d7474af "feat: US-012 - Add basic error handling and reconnection logic"
+- Updated PRD: US-012 marked as passes: true
+
+**Learnings for future iterations:**
+- y-websocket WebsocketProvider has built-in exponential backoff with configurable maxBackoffTime option
+- Custom reconnection logic needed to match specific backoff requirements (1s, 2s, 4s, 8s)
+- WebSocket provider events: 'status', 'connection-error', 'sync' (not 'synced')
+- Error handler receives Event/ErrorEvent objects, not raw Error objects
+- Use ErrorEvent.error.message to extract error details, fallback to generic message
+- Exponential backoff formula: Math.min(Math.pow(2, attempts - 1) * 1000, maxTime)
+- setTimeout return type: use ReturnType<typeof setTimeout> instead of NodeJS.Timeout in browser environment
+- Reconnection state management: track attempts, schedule timeout, cleanup on unmount
+- UI pattern: conditional rendering based on status and attempt count (status === 'connecting' && reconnectAttempts > 0)
+- Document preservation: useRef ensures Y.Doc/Y.Text persist across re-renders and disconnections
+- Yjs CRDT handles change queuing automatically - no manual buffering needed
+- Testing pattern: use vi.mocked() with async beforeEach to access mocked function
+- Avoid top-level variables in mock factories (vitest hoisting issue) - define mocks inside factory function
+- **CRITICAL**: Automated testing approach successfully validates all reconnection and error handling features
+- **PATTERN**: This comprehensive testing validates exponential backoff, error display, reconnection attempts, UI reactivity
+---
