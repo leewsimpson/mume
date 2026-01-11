@@ -1,16 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Y from 'yjs';
+import type { Awareness } from 'y-protocols/awareness';
+import { RemoteCursors } from './RemoteCursors';
 
 interface MarkdownEditorProps {
   ytext: Y.Text | null;
+  awareness: Awareness | null;
   initialContent?: string;
 }
 
 /**
  * Markdown editor component with Yjs bidirectional sync
  * Binds textarea to Y.Text for real-time collaborative editing
+ * Tracks cursor position and selection for remote user awareness
  */
-export function MarkdownEditor({ ytext, initialContent = '' }: MarkdownEditorProps) {
+export function MarkdownEditor({ ytext, awareness, initialContent = '' }: MarkdownEditorProps) {
   const [content, setContent] = useState(initialContent);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isLocalChangeRef = useRef(false);
@@ -93,6 +97,21 @@ export function MarkdownEditor({ ytext, initialContent = '' }: MarkdownEditorPro
     };
   }, [ytext, initialContent]);
 
+  // Update cursor position in awareness
+  const updateCursorPosition = (textarea: HTMLTextAreaElement) => {
+    if (!awareness) return;
+
+    const currentState = awareness.getLocalState();
+    awareness.setLocalState({
+      ...currentState,
+      cursor: {
+        position: textarea.selectionStart,
+        selectionStart: textarea.selectionStart,
+        selectionEnd: textarea.selectionEnd,
+      },
+    });
+  };
+
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     const oldValue = content;
@@ -104,6 +123,9 @@ export function MarkdownEditor({ ytext, initialContent = '' }: MarkdownEditorPro
 
     // Update local state immediately for responsive UI
     setContent(newValue);
+
+    // Update cursor position in awareness
+    updateCursorPosition(e.target);
 
     // Calculate the diff and apply to Y.Text
     const cursorPos = e.target.selectionStart;
@@ -151,13 +173,24 @@ export function MarkdownEditor({ ytext, initialContent = '' }: MarkdownEditorPro
     });
   };
 
+  // Handle cursor movement and selection changes
+  const handleSelectionChange = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
+    updateCursorPosition(e.currentTarget);
+  };
+
   return (
-    <textarea
-      ref={textareaRef}
-      className="markdown-textarea"
-      value={content}
-      onChange={handleChange}
-      placeholder="Type your markdown here..."
-    />
+    <div className="editor-container" style={{ position: 'relative' }}>
+      <textarea
+        ref={textareaRef}
+        className="markdown-textarea"
+        value={content}
+        onChange={handleChange}
+        onSelect={handleSelectionChange}
+        onKeyUp={handleSelectionChange}
+        onClick={handleSelectionChange}
+        placeholder="Type your markdown here..."
+      />
+      <RemoteCursors awareness={awareness} textareaRef={textareaRef} />
+    </div>
   );
 }

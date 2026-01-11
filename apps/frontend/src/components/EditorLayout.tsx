@@ -54,6 +54,7 @@ export function EditorLayout({ userName, documentId }: EditorLayoutProps) {
         <div className="editor-pane">
           <MarkdownEditor
             ytext={ytext}
+            awareness={awareness}
             initialContent="# Welcome to the Markdown Editor\n\nStart typing to see the preview update in real-time."
           />
         </div>
