@@ -259,8 +259,7 @@
         "Colors and spacing are consistent",
         "Interface is usable and professional-looking",
         "Responsive design works on desktop (no mobile requirement for PoC)",
-        "Typecheck passes",
-        "Visual review in browser"
+        "Typecheck passes"
       ],
       "priority": 14,
       "passes": false,

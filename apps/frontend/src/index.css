@@ -143,6 +143,37 @@ h1 {
   color: rgba(255, 255, 255, 0.7);
 }
 
+.reconnect-info {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  color: rgba(251, 191, 36, 0.9);
+  padding: 0.3rem 0.6rem;
+  background-color: rgba(251, 191, 36, 0.1);
+  border-radius: 4px;
+  margin: 0 1rem;
+}
+
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: rgba(239, 68, 68, 0.15);
+  border-bottom: 2px solid rgba(239, 68, 68, 0.4);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.9rem;
+}
+
+.error-icon {
+  font-size: 1.2rem;
+}
+
+.error-message {
+  flex: 1;
+  color: rgba(255, 255, 255, 0.9);
+}
+
 .editor-content {
   display: grid;
   grid-template-columns: 1fr 1fr;

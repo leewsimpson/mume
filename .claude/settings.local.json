@@ -9,7 +9,9 @@
       "Bash(taskkill //F //PID 50988)",
       "Bash(whoami:*)",
       "Bash(powershell -Command \"[Security.Principal.WindowsIdentity]::GetCurrent\\(\\).Groups -contains ''S-1-5-32-544''\")",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(taskkill:*)",
+      "Bash(timeout /t 3)"
     ],
     "additionalDirectories": [
       "c:\\Github\\multi-user-markdown-editor"
