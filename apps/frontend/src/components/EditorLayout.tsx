@@ -6,13 +6,14 @@ import { UserPresence } from './UserPresence';
 
 interface EditorLayoutProps {
   userName: string;
+  documentId: string;
 }
 
-export function EditorLayout({ userName }: EditorLayoutProps) {
+export function EditorLayout({ userName, documentId }: EditorLayoutProps) {
   const [markdown, setMarkdown] = useState('# Welcome to the Markdown Editor\n\nStart typing to see the preview update in real-time.');
 
-  // Initialize Yjs provider with default document 'welcome' and user name
-  const { ydoc: _ydoc, ytext, provider: _provider, awareness, status } = useYjsProvider('welcome', userName);
+  // Initialize Yjs provider with document ID from route and user name
+  const { ydoc: _ydoc, ytext, provider: _provider, awareness, status } = useYjsProvider(documentId, userName);
 
   // Sync markdown state with Y.Text for preview pane
   useEffect(() => {
