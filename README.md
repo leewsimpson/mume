@@ -71,10 +71,12 @@ The frontend runs on port 5173 and provides:
 
 ## Project Structure
 
-- `/apps/api` - Express server with Yjs WebSocket integration
-- `/apps/frontend` - React application with Vite
+- [`/apps/api`](apps/api/README.md) - Express server with Yjs WebSocket integration
+- [`/apps/frontend`](apps/frontend/README.md) - React application with Vite
 - `/scripts` - Build and development scripts
 - `/doco` - Project documentation
+
+For detailed setup and configuration of each application, see their respective README files.
 
 ## Development Status
 
