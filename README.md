@@ -78,6 +78,18 @@ The frontend runs on port 5173 and provides:
 
 For detailed setup and configuration of each application, see their respective README files.
 
+## Development Utilities
+
+### Port Management
+
+If you encounter port conflicts during development, use the kill-ports utility:
+
+```bash
+node scripts/kill-ports.js <port>
+```
+
+The frontend dev script automatically runs this before starting Vite to ensure port 5173 is available.
+
 ## Development Status
 
 This is a PoC implementation focusing on proving the collaborative editing concept works with Yjs.
