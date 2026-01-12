@@ -309,3 +309,42 @@ h1 {
   font-weight: 500;
   cursor: help;
 }
+
+/* Comments Toggle Button */
+.comments-toggle-button {
+  padding: 0.5rem 1rem;
+  background: #238636;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.comments-toggle-button:hover {
+  background: #2ea043;
+}
+
+/* Add Comment Button */
+.add-comment-button {
+  padding: 0.5rem 1rem;
+  background: #238636;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background-color 0.2s, transform 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.add-comment-button:hover {
+  background: #2ea043;
+  transform: scale(1.05);
+}

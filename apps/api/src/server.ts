@@ -11,6 +11,7 @@ import { configurePassport, validateOAuthConfig } from './config/passport.js';
 import { validateEncryptionKey } from './services/token.service.js';
 import authRoutes from './routes/auth.routes.js';
 import repositoryRoutes from './routes/repository.routes.js';
+import commentRoutes from './routes/comment.routes.js';
 import { startGitHubSyncJob, stopGitHubSyncJob } from './jobs/githubSync.job.js';
 
 // Environment configuration
@@ -70,6 +71,7 @@ async function bootstrap() {
   // Register routes
   app.use('/auth', authRoutes);
   app.use('/api/repositories', repositoryRoutes);
+  app.use('/api/comments', commentRoutes);
 
   // Health check endpoint
   app.get('/health', (_req, res) => {

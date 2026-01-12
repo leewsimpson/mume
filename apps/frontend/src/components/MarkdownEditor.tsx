@@ -7,6 +7,7 @@ interface MarkdownEditorProps {
   ytext: Y.Text | null;
   awareness: Awareness | null;
   initialContent?: string;
+  onAddComment?: (charStart: number, charEnd: number, selectedText: string) => void;
 }
 
 /**
@@ -14,8 +15,10 @@ interface MarkdownEditorProps {
  * Binds textarea to Y.Text for real-time collaborative editing
  * Tracks cursor position and selection for remote user awareness
  */
-export function MarkdownEditor({ ytext, awareness, initialContent = '' }: MarkdownEditorProps) {
+export function MarkdownEditor({ ytext, awareness, initialContent = '', onAddComment }: MarkdownEditorProps) {
   const [content, setContent] = useState(initialContent);
+  const [selection, setSelection] = useState<{ start: number; end: number; text: string } | null>(null);
+  const [buttonPosition, setButtonPosition] = useState<{ top: number; left: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isLocalChangeRef = useRef(false);
 
@@ -175,7 +178,37 @@ export function MarkdownEditor({ ytext, awareness, initialContent = '' }: Markdo
 
   // Handle cursor movement and selection changes
   const handleSelectionChange = (e: React.SyntheticEvent<HTMLTextAreaElement>) => {
-    updateCursorPosition(e.currentTarget);
+    const textarea = e.currentTarget;
+    updateCursorPosition(textarea);
+
+    // Show "Add Comment" button if text is selected
+    const selStart = textarea.selectionStart;
+    const selEnd = textarea.selectionEnd;
+
+    if (selStart !== selEnd && selStart < selEnd) {
+      const selectedText = textarea.value.substring(selStart, selEnd);
+      setSelection({ start: selStart, end: selEnd, text: selectedText });
+
+      // Calculate button position relative to textarea
+      const rect = textarea.getBoundingClientRect();
+      // Position button near the end of selection (rough approximation)
+      setButtonPosition({
+        top: rect.top + 20,
+        left: rect.left + rect.width / 2,
+      });
+    } else {
+      setSelection(null);
+      setButtonPosition(null);
+    }
+  };
+
+  const handleAddCommentClick = () => {
+    if (selection && onAddComment) {
+      onAddComment(selection.start, selection.end, selection.text);
+      // Clear selection after adding comment
+      setSelection(null);
+      setButtonPosition(null);
+    }
   };
 
   return (
@@ -191,6 +224,23 @@ export function MarkdownEditor({ ytext, awareness, initialContent = '' }: Markdo
         placeholder="Type your markdown here..."
       />
       <RemoteCursors awareness={awareness} textareaRef={textareaRef} />
+
+      {/* Add Comment button - appears when text is selected */}
+      {selection && buttonPosition && (
+        <button
+          className="add-comment-button"
+          style={{
+            position: 'fixed',
+            top: `${buttonPosition.top}px`,
+            left: `${buttonPosition.left}px`,
+            transform: 'translate(-50%, 0)',
+            zIndex: 100,
+          }}
+          onClick={handleAddCommentClick}
+        >
+          💬 Add Comment
+        </button>
+      )}
     </div>
   );
 }
