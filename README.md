@@ -110,6 +110,7 @@ The frontend runs on port 5173 and provides:
 
 - [`/apps/api`](apps/api/README.md) - Express server with Yjs WebSocket integration
 - [`/apps/frontend`](apps/frontend/README.md) - React application with Vite
+- [`/tests`](tests/README.md) - End-to-end tests with Playwright
 - `/scripts` - Build and development scripts
 - `/doco` - Project documentation
 
@@ -126,6 +127,40 @@ node scripts/kill-ports.js <port>
 ```
 
 The frontend dev script automatically runs this before starting Vite to ensure port 5173 is available.
+
+## Testing
+
+### End-to-End Tests
+
+The project includes comprehensive E2E tests using Playwright. See [`tests/README.md`](tests/README.md) for full documentation.
+
+```bash
+# Ensure Docker services are running
+docker-compose up -d
+
+# Install test dependencies
+cd tests
+npm install
+npx playwright install
+
+# Run all tests
+npm test
+
+# Run with UI for debugging
+npm run test:ui
+```
+
+### Unit Tests
+
+Each application has its own unit test suite:
+
+```bash
+# Backend tests (Jest)
+cd apps/api && npm test
+
+# Frontend tests (Vitest)
+cd apps/frontend && npm test
+```
 
 ## Development Status
 
