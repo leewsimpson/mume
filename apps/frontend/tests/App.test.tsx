@@ -1,88 +1,63 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen } from '@testing-library/react'
 import App from '../src/App'
 
-// Mock the EditorLayout component to avoid WebSocket connection issues in tests
-vi.mock('../src/components/EditorLayout', () => ({
-  EditorLayout: ({ userName, documentId }: { userName: string; documentId: string }) => (
-    <div data-testid="editor-layout">
-      <div data-testid="editor-username">{userName}</div>
-      <div data-testid="editor-documentid">{documentId}</div>
+// Mock the pages to avoid complex setup
+vi.mock('../src/pages/Login', () => ({
+  Login: () => (
+    <div data-testid="login-page">
+      <h1>Multi-User Markdown Editor</h1>
+      <button>Sign in with GitHub</button>
     </div>
   ),
 }))
 
-describe('App - Name-based Authentication Flow', () => {
+vi.mock('../src/pages/RepositorySelector', () => ({
+  RepositorySelector: () => <div data-testid="repository-selector">Repository Selector</div>,
+}))
+
+vi.mock('../src/pages/DocumentBrowser', () => ({
+  DocumentBrowser: () => <div data-testid="document-browser">Document Browser</div>,
+}))
+
+vi.mock('../src/pages/Editor', () => ({
+  Editor: () => <div data-testid="editor-page">Editor</div>,
+}))
+
+describe('App - GitHub OAuth Authentication Flow', () => {
   beforeEach(() => {
-    // Clear sessionStorage before each test
+    // Clear any stored state
     sessionStorage.clear()
   })
 
-  it('shows NamePrompt when no name is stored in sessionStorage', () => {
+  it('shows Login page when navigating to root', () => {
     render(<App />)
 
+    // Root redirects to /login
+    expect(screen.getByTestId('login-page')).toBeInTheDocument()
     expect(screen.getByText('Multi-User Markdown Editor')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Your name')).toBeInTheDocument()
   })
 
-  it('redirects to editor after entering valid name', async () => {
+  it('shows Login page with GitHub sign-in button', () => {
     render(<App />)
 
-    const input = screen.getByPlaceholderText('Your name')
-    const button = screen.getByText('Start Editing')
-
-    fireEvent.change(input, { target: { value: 'TestUser' } })
-    fireEvent.click(button)
-
-    // Wait for editor to appear
-    await waitFor(() => {
-      expect(screen.getByTestId('editor-layout')).toBeInTheDocument()
-    })
-
-    // Verify username is passed to editor
-    expect(screen.getByTestId('editor-username')).toHaveTextContent('TestUser')
+    expect(screen.getByText('Sign in with GitHub')).toBeInTheDocument()
   })
 
-  it('loads name from sessionStorage on mount and shows editor', async () => {
-    // Pre-populate sessionStorage
-    sessionStorage.setItem('userName', 'StoredUser')
-
+  it('has correct route structure for login', () => {
     render(<App />)
 
-    // Should skip NamePrompt and go directly to editor
-    await waitFor(() => {
-      expect(screen.getByTestId('editor-layout')).toBeInTheDocument()
-    })
-
-    expect(screen.getByTestId('editor-username')).toHaveTextContent('StoredUser')
-    expect(screen.queryByPlaceholderText('Your name')).not.toBeInTheDocument()
+    // App should render login page by default (redirected from /)
+    expect(screen.getByTestId('login-page')).toBeInTheDocument()
   })
 
-  it('persists name during browser session', async () => {
+  it('redirects legacy /doc routes to login', () => {
+    // Set window location to legacy route
+    window.history.pushState({}, '', '/doc/welcome')
+    
     render(<App />)
 
-    // Enter name
-    const input = screen.getByPlaceholderText('Your name')
-    fireEvent.change(input, { target: { value: 'SessionUser' } })
-    fireEvent.click(screen.getByText('Start Editing'))
-
-    // Wait for editor to appear
-    await waitFor(() => {
-      expect(screen.getByTestId('editor-layout')).toBeInTheDocument()
-    })
-
-    // Verify sessionStorage still has the name
-    expect(sessionStorage.getItem('userName')).toBe('SessionUser')
-  })
-
-  it('redirects to /doc/welcome by default', async () => {
-    sessionStorage.setItem('userName', 'DefaultUser')
-
-    render(<App />)
-
-    // Wait for router to navigate to default route
-    await waitFor(() => {
-      expect(screen.getByTestId('editor-documentid')).toHaveTextContent('welcome')
-    })
+    // Legacy routes should redirect to login
+    expect(screen.getByTestId('login-page')).toBeInTheDocument()
   })
 })

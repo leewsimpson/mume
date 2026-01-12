@@ -40,12 +40,16 @@ function generateUserColor(): string {
  * @param documentId - The document room/ID to connect to
  * @param userName - The name of the current user for presence
  * @param wsUrl - WebSocket URL (defaults to ws://localhost:3000)
+ * @param avatarUrl - Optional GitHub avatar URL for the current user
+ * @param githubId - Optional GitHub ID for the current user
  * @returns Yjs document, text type, provider, awareness, and connection status
  */
 export function useYjsProvider(
   documentId: string,
   userName: string,
-  wsUrl = 'ws://localhost:3000'
+  wsUrl = 'ws://localhost:3000',
+  avatarUrl = '',
+  githubId = ''
 ): YjsProviderResult {
   const [status, setStatus] = useState<ConnectionStatus>('connecting');
   const [error, setError] = useState<string | null>(null);
@@ -88,6 +92,8 @@ export function useYjsProvider(
         awareness.setLocalState({
           name: userName,
           color: userColorRef.current,
+          avatarUrl,
+          githubId,
         });
       } else if (event.status === 'connecting') {
         setStatus('connecting');
@@ -149,7 +155,7 @@ export function useYjsProvider(
       providerRef.current = null;
       awarenessRef.current = null;
     };
-  }, [documentId, wsUrl, userName]);
+  }, [documentId, wsUrl, userName, avatarUrl, githubId]);
 
   return {
     ydoc: ydocRef.current,

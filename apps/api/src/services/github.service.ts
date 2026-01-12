@@ -63,6 +63,7 @@ interface FileContent {
  */
 export class GitHubService {
   private repoCache: Map<string, CacheEntry<Repository[]>> = new Map();
+  private treeCache: Map<string, CacheEntry<TreeResponse>> = new Map();
   private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
   private readonly MAX_RETRIES = 3;
   private readonly BASE_RETRY_DELAY = 1000; // 1 second
@@ -189,6 +190,19 @@ export class GitHubService {
     token: string,
     logger?: Logger
   ): Promise<TreeResponse> {
+    const cacheKey = `tree:${owner}/${repo}`;
+    const cached = this.treeCache.get(cacheKey);
+
+    if (cached && Date.now() < cached.expiresAt) {
+      logger?.info('Returning cached repository tree', {
+        operation: 'getRepositoryTree',
+        owner,
+        repo,
+        cached: true,
+      });
+      return cached.data;
+    }
+
     logger?.info('Fetching repository tree from GitHub', {
       operation: 'getRepositoryTree',
       owner,
@@ -218,6 +232,12 @@ export class GitHubService {
         });
         return response.data as TreeResponse;
       }, logger);
+
+      // Cache the result
+      this.treeCache.set(cacheKey, {
+        data: tree,
+        expiresAt: Date.now() + this.CACHE_TTL_MS,
+      });
 
       const duration = Date.now() - startTime;
       logger?.metric('github_api_duration_ms', duration, {
@@ -445,6 +465,42 @@ export class GitHubService {
   }
 
   /**
+   * Filter tree to show only .md files and folders containing .md files
+   * Returns filtered tree with metadata for each file
+   */
+  filterMarkdownTree(tree: TreeResponse): TreeItem[] {
+    // First, identify all .md files
+    const mdFiles = tree.tree.filter(
+      (item) => item.type === 'blob' && item.path?.endsWith('.md')
+    );
+
+    // Extract unique folder paths that contain .md files
+    const foldersWithMd = new Set<string>();
+    mdFiles.forEach((file) => {
+      if (file.path) {
+        const pathParts = file.path.split('/');
+        // Add all parent folders
+        for (let i = 1; i < pathParts.length; i++) {
+          foldersWithMd.add(pathParts.slice(0, i).join('/'));
+        }
+      }
+    });
+
+    // Filter tree to include only .md files and their parent folders
+    const filteredTree = tree.tree.filter((item) => {
+      if (item.type === 'blob' && item.path?.endsWith('.md')) {
+        return true;
+      }
+      if (item.type === 'tree' && item.path && foldersWithMd.has(item.path)) {
+        return true;
+      }
+      return false;
+    });
+
+    return filteredTree;
+  }
+
+  /**
    * Clear cache entry for a specific token
    */
   clearCache(token: string): void {
@@ -453,9 +509,18 @@ export class GitHubService {
   }
 
   /**
+   * Clear tree cache for a specific repository
+   */
+  clearTreeCache(owner: string, repo: string): void {
+    const cacheKey = `tree:${owner}/${repo}`;
+    this.treeCache.delete(cacheKey);
+  }
+
+  /**
    * Clear all cache entries
    */
   clearAllCache(): void {
     this.repoCache.clear();
+    this.treeCache.clear();
   }
 }
