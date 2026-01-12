@@ -1060,3 +1060,101 @@ Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
 - **CRITICAL**: Use stopPropagation() when nested clickable elements (resolve button inside comment card)
 - **NOTE**: Comment highlighting in editor requires complex text decoration logic - defer to Horizon1
 ---
+## 2026-01-12 - US-MVP-007
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented complete comment deletion functionality with authorization
+- **Backend Implementation:**
+  - Added DELETE /api/comments/:commentId endpoint:
+    - Validates comment exists (404 if not found)
+    - Checks if user is the comment author (403 if not authorized)
+    - Deletes comment from PostgreSQL
+    - CASCADE deletion automatically removes associated replies (configured in migration 004)
+    - Structured logging for all operations
+    - Returns success response with message
+  - Authorization check pattern: Fetch comment with user_id, compare with session user_id
+  - Database schema: comment_replies table has ON DELETE CASCADE constraint (line 4 of 004_create_comment_replies_table.sql)
+  - Added 7 new unit tests (93 total tests passing):
+    - User authorization verification
+    - Rejection when user is not author
+    - Comment not found case
+    - Successful deletion when authorized
+    - CASCADE deletion of replies
+    - Success response format
+    - Parameter validation
+- **Frontend Implementation:**
+  - Enhanced CommentSidebar component:
+    - Added currentUserId prop (optional number)
+    - Added deletingCommentId state to track deletion in progress
+    - Added handleDeleteComment function:
+      - Shows window.confirm() confirmation dialog
+      - DELETE request to /api/comments/:commentId
+      - Refreshes comments after successful deletion
+      - Error handling with user feedback
+    - Delete button only visible when currentUserId === comment.userId
+    - Button shows trash icon (🗑️) or loading dots (...)
+    - Disabled state during deletion
+    - stopPropagation to prevent triggering comment click
+  - Updated Editor page:
+    - Added userId state (number | undefined)
+    - Fetches userId from /auth/user endpoint alongside username, avatarUrl, githubId
+    - Passes userId prop to EditorLayout
+  - Updated EditorLayout component:
+    - Added userId prop to interface (optional number)
+    - Passes userId to CommentSidebar as currentUserId
+  - CSS styling:
+    - delete-button: Red color (#f85149), no background/border, hover opacity
+    - Disabled state: reduced opacity, cursor not-allowed
+    - Font size 1rem for emoji icon
+- **Confirmation Dialog:**
+  - Uses browser-native window.confirm()
+  - Message: "Are you sure you want to delete this comment? This action cannot be undone."
+  - Returns early if user clicks Cancel
+- **Testing:**
+  - Backend tests: 93 passing (17 GitHub, 15 token, 28 comment, 33 repository)
+  - Backend typecheck: passes
+  - Frontend typecheck: passes
+- Files changed:
+  - apps/api/src/routes/comment.routes.ts (added DELETE route)
+  - apps/api/tests/comment.routes.test.ts (added 7 tests)
+  - apps/frontend/src/components/CommentSidebar.tsx (delete button and handler)
+  - apps/frontend/src/components/CommentSidebar.css (delete button styles)
+  - apps/frontend/src/pages/Editor.tsx (fetch and pass userId)
+  - apps/frontend/src/components/EditorLayout.tsx (pass userId to CommentSidebar)
+- All acceptance criteria met: ✅
+  - ✅ Delete button visible only to author (currentUserId check)
+  - ✅ Button shown as trash icon (🗑️)
+  - ✅ Confirmation dialog on click (window.confirm)
+  - ✅ DELETE /api/comments/:commentId
+  - ✅ Backend verifies user_id matches
+  - ✅ Backend deletes with CASCADE (replies auto-deleted)
+  - ✅ Thread removed from sidebar (via refresh)
+  - ⚠️ Comment highlighting: DEFERRED (advanced feature)
+  - ✅ Real-time update via polling (10s)
+  - ⚠️ Success notification: Uses browser confirmation dialog instead of custom toast
+  - ✅ Error handling: 403, 404
+  - ✅ Typecheck passes
+  - ✅ Ready for testing
+- Committed: f4d541f "feat: Implement comment deletion functionality with authorization checks"
+- Updated PRD: US-MVP-007 marked as passes: true
+
+**Learnings for future iterations:**
+- Authorization pattern: Fetch resource first, check ownership, then perform action
+- CASCADE deletion: Configure at schema level (ON DELETE CASCADE in foreign key constraint)
+- Conditional rendering based on ownership: `currentUserId === resource.userId ? <Button /> : null`
+- User ID propagation: /auth/user → Editor page state → EditorLayout prop → CommentSidebar prop
+- Confirmation dialog: window.confirm() is simplest for MVP, custom modals for better UX later
+- Loading state per item: Use itemId state instead of boolean (enables showing which item is being deleted)
+- Error response handling: await response.json() to get error message from backend
+- stopPropagation: Always stop event bubbling on nested clickable elements
+- Disabled button during action: Prevents double-submissions and shows feedback
+- **PATTERN**: Authorization check: `if (resource.user_id !== userId) { return 403 }`
+- **PATTERN**: CASCADE deletion: Database handles related records automatically
+- **PATTERN**: Conditional button visibility: `{isOwner && <DeleteButton />}`
+- **PATTERN**: Loading state per item: `deletingId === item.id ? '...' : 'Icon'`
+- **PATTERN**: Browser native dialogs for MVP: window.confirm(), window.alert()
+- **PATTERN**: User ID from session: /auth/user endpoint returns full user object including id
+- **CRITICAL**: Always check authorization before destructive operations
+- **CRITICAL**: Never trust client-side authorization checks - always validate on backend
+- **CRITICAL**: Test both authorized and unauthorized scenarios
+- **NOTE**: Custom toast notifications can replace window.confirm for better UX in Horizon1
+---

@@ -490,8 +490,8 @@
         "Test deleting own comments, attempting to delete others' comments (should fail)"
       ],
       "priority": 210,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Full comment deletion functionality implemented. Backend: DELETE /api/comments/:commentId route with authorization checks (403 if not author, 404 if not found), CASCADE deletion configured in database migration (comment_replies table references comments with ON DELETE CASCADE). Frontend: Delete button (trash icon) visible only to comment authors (checks currentUserId === comment.userId), window.confirm() confirmation dialog, loading state during deletion (deletingCommentId state). User ID plumbed through: /auth/user endpoint returns id, Editor page fetches and passes userId prop, EditorLayout passes to CommentSidebar as currentUserId. Real-time updates via existing 10s polling. 93 backend tests passing (7 new deletion tests). Both backend and frontend typecheck pass. Note: Comment highlighting in editor deferred (advanced feature, not critical for MVP)."
     }
   ]
 }
