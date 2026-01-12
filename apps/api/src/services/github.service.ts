@@ -66,12 +66,17 @@ export class GitHubService {
   private readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
   private readonly MAX_RETRIES = 3;
   private readonly BASE_RETRY_DELAY = 1000; // 1 second
+  private readonly octokitFactory: (token: string) => Octokit;
+
+  constructor(octokitFactory?: (token: string) => Octokit) {
+    this.octokitFactory = octokitFactory || ((token: string) => new Octokit({ auth: token }));
+  }
 
   /**
    * Create an authenticated Octokit instance for a user
    */
   private createOctokit(token: string): Octokit {
-    return new Octokit({ auth: token });
+    return this.octokitFactory(token);
   }
 
   /**

@@ -1,35 +1,38 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { GitHubService } from '../src/services/github.service.js';
-
-// Mock Octokit
-const mockListForAuthenticatedUser = jest.fn();
-const mockGet = jest.fn();
-const mockGetContent = jest.fn();
-const mockCreateOrUpdateFileContents = jest.fn();
-const mockGetTree = jest.fn();
-
-jest.unstable_mockModule('octokit', () => ({
-  Octokit: jest.fn().mockImplementation(() => ({
-    rest: {
-      repos: {
-        listForAuthenticatedUser: mockListForAuthenticatedUser,
-        get: mockGet,
-        getContent: mockGetContent,
-        createOrUpdateFileContents: mockCreateOrUpdateFileContents,
-      },
-      git: {
-        getTree: mockGetTree,
-      },
-    },
-  })),
-}));
+import type { Octokit } from 'octokit';
 
 describe('GitHubService', () => {
   let service: GitHubService;
+  let mockOctokit: jest.Mocked<Octokit>;
+
+  // Create mock functions
+  const mockListForAuthenticatedUser = jest.fn();
+  const mockGet = jest.fn();
+  const mockGetContent = jest.fn();
+  const mockCreateOrUpdateFileContents = jest.fn();
+  const mockGetTree = jest.fn();
 
   beforeEach(() => {
-    service = new GitHubService();
     jest.clearAllMocks();
+
+    // Create mock Octokit instance
+    mockOctokit = {
+      rest: {
+        repos: {
+          listForAuthenticatedUser: mockListForAuthenticatedUser,
+          get: mockGet,
+          getContent: mockGetContent,
+          createOrUpdateFileContents: mockCreateOrUpdateFileContents,
+        },
+        git: {
+          getTree: mockGetTree,
+        },
+      },
+    } as unknown as jest.Mocked<Octokit>;
+
+    // Create service with mock Octokit factory
+    service = new GitHubService(() => mockOctokit);
     service.clearAllCache();
   });
 
