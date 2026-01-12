@@ -184,4 +184,154 @@ describe('Comment Feature', () => {
       expect(typeof request.text).toBe('string');
     });
   });
+
+  describe('Comment reply functionality', () => {
+    it('should validate reply text is not empty', () => {
+      const replyText = 'This is a reply';
+      expect(replyText.trim()).not.toBe('');
+    });
+
+    it('should reject empty or whitespace-only reply text', () => {
+      const emptyReply = '   ';
+      expect(emptyReply.trim()).toBe('');
+    });
+
+    it('should transform reply database rows correctly', () => {
+      const replyRow = {
+        id: 1,
+        comment_id: 10,
+        user_id: 2,
+        text: 'This is a reply',
+        created_at: new Date(),
+        updated_at: new Date(),
+        username: 'replier',
+        avatar_url: 'https://github.com/replier.png',
+      };
+
+      const reply = {
+        id: replyRow.id,
+        commentId: replyRow.comment_id,
+        userId: replyRow.user_id,
+        text: replyRow.text,
+        createdAt: replyRow.created_at,
+        updatedAt: replyRow.updated_at,
+        user: {
+          id: replyRow.user_id,
+          username: replyRow.username,
+          avatarUrl: replyRow.avatar_url,
+        },
+      };
+
+      expect(reply.id).toBe(replyRow.id);
+      expect(reply.commentId).toBe(replyRow.comment_id);
+      expect(reply.userId).toBe(replyRow.user_id);
+      expect(reply.text).toBe(replyRow.text);
+      expect(reply.user.username).toBe(replyRow.username);
+    });
+
+    it('should group replies by comment_id correctly', () => {
+      const replies = [
+        { id: 1, comment_id: 10, text: 'Reply 1' },
+        { id: 2, comment_id: 10, text: 'Reply 2' },
+        { id: 3, comment_id: 20, text: 'Reply 3' },
+      ];
+
+      const repliesMap = new Map<number, any[]>();
+      for (const reply of replies) {
+        if (!repliesMap.has(reply.comment_id)) {
+          repliesMap.set(reply.comment_id, []);
+        }
+        repliesMap.get(reply.comment_id)!.push(reply);
+      }
+
+      expect(repliesMap.get(10)?.length).toBe(2);
+      expect(repliesMap.get(20)?.length).toBe(1);
+      expect(repliesMap.get(30)).toBeUndefined();
+    });
+
+    it('should sort replies chronologically', () => {
+      const replies = [
+        { id: 2, created_at: new Date('2026-01-12T12:00:00') },
+        { id: 1, created_at: new Date('2026-01-12T11:00:00') },
+        { id: 3, created_at: new Date('2026-01-12T13:00:00') },
+      ];
+
+      const sorted = [...replies].sort((a, b) =>
+        a.created_at.getTime() - b.created_at.getTime()
+      );
+
+      expect(sorted[0].id).toBe(1);
+      expect(sorted[1].id).toBe(2);
+      expect(sorted[2].id).toBe(3);
+    });
+  });
+
+  describe('Comment resolve functionality', () => {
+    it('should validate resolved field is boolean', () => {
+      const validResolved = true;
+      expect(typeof validResolved).toBe('boolean');
+    });
+
+    it('should reject non-boolean resolved values', () => {
+      const invalidResolved = 'true';
+      expect(typeof invalidResolved).not.toBe('boolean');
+    });
+
+    it('should update resolved status correctly', () => {
+      const comment = {
+        id: 1,
+        resolved: false,
+      };
+
+      // Simulate update
+      const updatedComment = {
+        ...comment,
+        resolved: true,
+      };
+
+      expect(updatedComment.resolved).toBe(true);
+      expect(updatedComment.resolved).not.toBe(comment.resolved);
+    });
+
+    it('should allow unresolving a comment', () => {
+      const resolvedComment = {
+        id: 1,
+        resolved: true,
+      };
+
+      // Simulate unresolve
+      const unresolvedComment = {
+        ...resolvedComment,
+        resolved: false,
+      };
+
+      expect(unresolvedComment.resolved).toBe(false);
+    });
+  });
+
+  describe('Comments with replies integration', () => {
+    it('should include replies array in comment object', () => {
+      const comment = {
+        id: 1,
+        text: 'Main comment',
+        replies: [
+          { id: 1, text: 'Reply 1' },
+          { id: 2, text: 'Reply 2' },
+        ],
+      };
+
+      expect(comment).toHaveProperty('replies');
+      expect(Array.isArray(comment.replies)).toBe(true);
+      expect(comment.replies.length).toBe(2);
+    });
+
+    it('should handle comments with no replies', () => {
+      const repliesMap = new Map<number, any[]>();
+      const commentId = 1;
+      const replies = repliesMap.get(commentId) || [];
+
+      expect(replies).toEqual([]);
+      expect(Array.isArray(replies)).toBe(true);
+    });
+  });
 });

@@ -7,6 +7,16 @@ interface User {
   avatarUrl: string;
 }
 
+export interface Reply {
+  id: number;
+  commentId: number;
+  userId: number;
+  text: string;
+  createdAt: string;
+  updatedAt: string;
+  user: User;
+}
+
 export interface Comment {
   id: number;
   userId: number;
@@ -20,6 +30,7 @@ export interface Comment {
   createdAt: string;
   updatedAt: string;
   user: User;
+  replies: Reply[];
 }
 
 interface CommentSidebarProps {
@@ -70,6 +81,9 @@ export function CommentSidebar({
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showResolved, setShowResolved] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<number | null>(null);
+  const [replyText, setReplyText] = useState('');
 
   // Fetch comments from backend
   const fetchComments = async () => {
@@ -122,16 +136,87 @@ export function CommentSidebar({
     }
   };
 
+  const handleReplySubmit = async (commentId: number) => {
+    if (!replyText.trim()) return;
+
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/comments/${commentId}/replies`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ text: replyText }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to submit reply');
+      }
+
+      // Reset reply state
+      setReplyText('');
+      setReplyingTo(null);
+
+      // Refresh comments
+      await fetchComments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to submit reply');
+    }
+  };
+
+  const handleResolveToggle = async (commentId: number, currentResolved: boolean) => {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/comments/${commentId}`,
+        {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({ resolved: !currentResolved }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to update comment');
+      }
+
+      // Refresh comments
+      await fetchComments();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update comment');
+    }
+  };
+
+  // Filter comments based on resolved status visibility
+  const filteredComments = showResolved
+    ? comments
+    : comments.filter((c) => !c.resolved);
+
   if (!isOpen) return null;
 
   return (
     <div className="comment-sidebar-overlay">
       <div className="comment-sidebar">
         <div className="comment-sidebar-header">
-          <h2>Comments</h2>
-          <button className="close-button" onClick={onClose}>
-            ✕
-          </button>
+          <div className="header-top">
+            <h2>Comments</h2>
+            <button className="close-button" onClick={onClose}>
+              ✕
+            </button>
+          </div>
+          <div className="header-controls">
+            <button
+              className="toggle-resolved-button"
+              onClick={() => setShowResolved(!showResolved)}
+            >
+              {showResolved ? 'Hide' : 'Show'} resolved
+            </button>
+          </div>
         </div>
 
         <div className="comment-sidebar-content">
@@ -157,34 +242,120 @@ export function CommentSidebar({
             </div>
           )}
 
-          {comments.length > 0 && (
+          {filteredComments.length > 0 && (
             <div className="comments-list">
-              {comments.map((comment) => (
+              {filteredComments.map((comment) => (
                 <div
                   key={comment.id}
-                  className="comment-thread"
-                  onClick={() => handleCommentClick(comment)}
+                  className={`comment-thread ${comment.resolved ? 'resolved' : ''}`}
                 >
-                  <div className="comment-header">
-                    <img
-                      src={comment.user.avatarUrl}
-                      alt={comment.user.username}
-                      className="comment-avatar"
-                    />
-                    <div className="comment-meta">
-                      <span className="comment-author">
-                        {comment.user.username}
-                      </span>
-                      <span className="comment-timestamp">
-                        {formatRelativeTime(comment.createdAt)}
-                      </span>
+                  <div className="comment-thread-header">
+                    <div className="comment-header">
+                      <img
+                        src={comment.user.avatarUrl}
+                        alt={comment.user.username}
+                        className="comment-avatar"
+                      />
+                      <div className="comment-meta">
+                        <span className="comment-author">
+                          {comment.user.username}
+                        </span>
+                        <span className="comment-timestamp">
+                          {formatRelativeTime(comment.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="comment-actions">
+                      {comment.resolved && (
+                        <span className="resolved-badge">Resolved</span>
+                      )}
+                      <button
+                        className="resolve-button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleResolveToggle(comment.id, comment.resolved);
+                        }}
+                      >
+                        {comment.resolved ? 'Unresolve' : 'Resolve'}
+                      </button>
                     </div>
                   </div>
-                  <div className="comment-body">
+                  <div
+                    className="comment-body"
+                    onClick={() => handleCommentClick(comment)}
+                  >
                     <p>{comment.text}</p>
                   </div>
                   <div className="comment-range">
                     Position: {comment.charStart}–{comment.charEnd}
+                  </div>
+
+                  {/* Replies */}
+                  {comment.replies && comment.replies.length > 0 && (
+                    <div className="replies-list">
+                      {comment.replies.map((reply) => (
+                        <div key={reply.id} className="reply">
+                          <div className="comment-header">
+                            <img
+                              src={reply.user.avatarUrl}
+                              alt={reply.user.username}
+                              className="comment-avatar reply-avatar"
+                            />
+                            <div className="comment-meta">
+                              <span className="comment-author">
+                                {reply.user.username}
+                              </span>
+                              <span className="comment-timestamp">
+                                {formatRelativeTime(reply.createdAt)}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="reply-body">
+                            <p>{reply.text}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Reply form */}
+                  <div className="reply-actions">
+                    {replyingTo === comment.id ? (
+                      <div className="reply-form">
+                        <textarea
+                          className="reply-input"
+                          value={replyText}
+                          onChange={(e) => setReplyText(e.target.value)}
+                          placeholder="Write a reply..."
+                          rows={3}
+                        />
+                        <div className="reply-form-actions">
+                          <button
+                            className="cancel-reply-button"
+                            onClick={() => {
+                              setReplyingTo(null);
+                              setReplyText('');
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            className="submit-reply-button"
+                            onClick={() => handleReplySubmit(comment.id)}
+                            disabled={!replyText.trim()}
+                          >
+                            Reply
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        className="reply-button"
+                        onClick={() => setReplyingTo(comment.id)}
+                      >
+                        Reply
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}

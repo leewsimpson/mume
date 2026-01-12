@@ -116,6 +116,42 @@ router.get(
         [owner, repo, filePath]
       );
 
+      // Fetch all replies for these comments
+      const commentIds = result.rows.map((row: any) => row.id);
+      let repliesMap = new Map<number, any[]>();
+
+      if (commentIds.length > 0) {
+        const repliesResult = await pool.query(
+          `SELECT r.id, r.comment_id, r.user_id, r.text, r.created_at, r.updated_at,
+                  u.username, u.avatar_url
+           FROM comment_replies r
+           JOIN users u ON r.user_id = u.id
+           WHERE r.comment_id = ANY($1)
+           ORDER BY r.created_at ASC`,
+          [commentIds]
+        );
+
+        // Group replies by comment_id
+        for (const reply of repliesResult.rows) {
+          if (!repliesMap.has(reply.comment_id)) {
+            repliesMap.set(reply.comment_id, []);
+          }
+          repliesMap.get(reply.comment_id)!.push({
+            id: reply.id,
+            commentId: reply.comment_id,
+            userId: reply.user_id,
+            text: reply.text,
+            createdAt: reply.created_at,
+            updatedAt: reply.updated_at,
+            user: {
+              id: reply.user_id,
+              username: reply.username,
+              avatarUrl: reply.avatar_url
+            }
+          });
+        }
+      }
+
       const comments = result.rows.map((row: any) => ({
         id: row.id,
         userId: row.user_id,
@@ -132,7 +168,8 @@ router.get(
           id: row.user_id,
           username: row.username,
           avatarUrl: row.avatar_url
-        }
+        },
+        replies: repliesMap.get(row.id) || []
       }));
 
       req.logger?.info('Comments fetched successfully', {
@@ -151,6 +188,142 @@ router.get(
         operation: 'fetch_comments'
       });
       res.status(500).json({ error: 'Failed to fetch comments' });
+    }
+  }
+);
+
+/**
+ * POST /api/comments/:commentId/replies
+ * Create a reply to a comment
+ */
+router.post(
+  '/:commentId/replies',
+  authenticate,
+  validateGitHubToken,
+  async (req: Request, res: Response) => {
+    try {
+      const { commentId } = req.params;
+      const { text } = req.body;
+      const user = req.user as SessionUser;
+      const userId = user?.id;
+
+      // Validation
+      if (!text || !text.trim()) {
+        return res.status(400).json({
+          error: 'Reply text cannot be empty'
+        });
+      }
+
+      // Check if parent comment exists
+      const commentCheck = await pool.query(
+        'SELECT id FROM comments WHERE id = $1',
+        [commentId]
+      );
+
+      if (commentCheck.rows.length === 0) {
+        return res.status(404).json({
+          error: 'Comment not found'
+        });
+      }
+
+      // Insert reply into database
+      const result = await pool.query(
+        `INSERT INTO comment_replies (comment_id, user_id, text, created_at, updated_at)
+         VALUES ($1, $2, $3, NOW(), NOW())
+         RETURNING id, comment_id, user_id, text, created_at, updated_at`,
+        [commentId, userId, text.trim()]
+      );
+
+      const reply = result.rows[0];
+
+      // Fetch user info to include in response
+      const userResult = await pool.query(
+        'SELECT id, username, avatar_url FROM users WHERE id = $1',
+        [userId]
+      );
+
+      const replyWithUser = {
+        ...reply,
+        user: userResult.rows[0]
+      };
+
+      req.logger?.info('Reply created successfully', {
+        userId,
+        commentId,
+        replyId: reply.id,
+        operation: 'create_reply'
+      });
+
+      res.status(201).json(replyWithUser);
+    } catch (error) {
+      req.logger?.error('Failed to create reply', error as Error, {
+        userId: (req.user as SessionUser)?.id,
+        commentId: req.params.commentId,
+        operation: 'create_reply'
+      });
+      res.status(500).json({ error: 'Failed to create reply' });
+    }
+  }
+);
+
+/**
+ * PATCH /api/comments/:commentId
+ * Update a comment (resolve/unresolve)
+ */
+router.patch(
+  '/:commentId',
+  authenticate,
+  validateGitHubToken,
+  async (req: Request, res: Response) => {
+    try {
+      const { commentId } = req.params;
+      const { resolved } = req.body;
+
+      // Validation
+      if (typeof resolved !== 'boolean') {
+        return res.status(400).json({
+          error: 'resolved field must be a boolean'
+        });
+      }
+
+      // Check if comment exists
+      const commentCheck = await pool.query(
+        'SELECT id FROM comments WHERE id = $1',
+        [commentId]
+      );
+
+      if (commentCheck.rows.length === 0) {
+        return res.status(404).json({
+          error: 'Comment not found'
+        });
+      }
+
+      // Update comment
+      const result = await pool.query(
+        `UPDATE comments
+         SET resolved = $1, updated_at = NOW()
+         WHERE id = $2
+         RETURNING id, user_id, document_path, repo_owner, repo_name, char_start, char_end, text, resolved, created_at, updated_at`,
+        [resolved, commentId]
+      );
+
+      const comment = result.rows[0];
+
+      req.logger?.info('Comment updated successfully', {
+        userId: (req.user as SessionUser)?.id,
+        commentId,
+        resolved,
+        operation: 'update_comment'
+      });
+
+      res.json(comment);
+    } catch (error) {
+      req.logger?.error('Failed to update comment', error as Error, {
+        userId: (req.user as SessionUser)?.id,
+        commentId: req.params.commentId,
+        operation: 'update_comment'
+      });
+      res.status(500).json({ error: 'Failed to update comment' });
     }
   }
 );
