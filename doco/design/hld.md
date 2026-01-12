@@ -1,7 +1,7 @@
 # Technical Design: Multi-User Collaborative Markdown Editor
 
-**Last Updated:** 2026-01-11
-**Status:** PoC Phase - Decisions Finalized
+**Last Updated:** 2026-01-12
+**Status:** MVP Phase Complete
 **Related Documents:** [requirements.md](../requirements/requirements.md), [prd.json](../../scripts/ralph/prd.json)
 
 ---
@@ -10,7 +10,7 @@
 
 This document captures the key technical decisions and architecture for the multi-user collaborative markdown editor. It focuses on architectural choices, component design, and technology selection rationale.
 
-**Important Note:** These decisions are specific to the **PoC (Proof of Concept) phase**. Technical choices may evolve for MVP and Horizon 1 phases based on lessons learned and changing requirements.
+**Current Status:** Both PoC and MVP phases are complete. The application now includes GitHub OAuth authentication, repository/file management, real-time collaborative editing, automatic GitHub commits, and a complete commenting system.
 
 **Scope:** This is a high-level design document. Detailed implementation patterns are maintained in the codebase itself, following the principle that code is the source of truth for implementation details.
 
@@ -248,15 +248,15 @@ Infrastructure:
 
 # Evolution Path: PoC → MVP → Production
 
-## PoC to MVP Upgrades
+## PoC to MVP Upgrades (Completed ✅)
 
-| Component | PoC | MVP | Rationale |
-|-----------|-----|-----|----------|
-| **Editor** | Basic Textarea | CodeMirror 6 | Better UX, syntax highlighting, Yjs integration |
-| **Backend** | Express | NestJS | Structured architecture, DI, better testability |
-| **Auth** | Name-based | Gmail SSO | Real authentication, user management |
-| **Storage** | In-memory | GitHub + PostgreSQL | Persistence, version control, metadata |
-| **Features** | Basic editing | + Document mgmt, comments, avatars | Core collaborative features |
+| Component | PoC | MVP (Implemented) | Rationale |
+|-----------|-----|-------------------|----------|
+| **Editor** | Basic Textarea | Basic Textarea (deferred CodeMirror) | Yjs integration works well with textarea |
+| **Backend** | Express | Express (deferred NestJS) | Kept Express for simplicity |
+| **Auth** | Name-based | GitHub OAuth | Seamless GitHub integration |
+| **Storage** | In-memory | GitHub + PostgreSQL | Documents in GitHub, metadata in PostgreSQL |
+| **Features** | Basic editing | + Document mgmt, comments, avatars, manual save | Core collaborative features complete |
 
 ## Architecture Evolution Considerations
 
@@ -308,17 +308,20 @@ Infrastructure:
 
 # Future Considerations
 
-## Deferred to Later Phases
+## Completed in MVP ✅
 
-**MVP Phase:**
-- Database selection and schema design (PostgreSQL recommended)
-- GitHub integration architecture (Octokit + commit strategy)
-- Comment storage and threading
-- Session management approach
-- Production deployment configuration
+- PostgreSQL database with users, tokens, comments, and replies tables
+- GitHub integration via Octokit with automatic commit strategy (30s intervals)
+- Comment storage with threading (replies) in PostgreSQL
+- Session management via Redis with express-session
+- Token encryption with AES-256-GCM
 
-**Horizon 1 Phase:**
-- Multi-SSO provider support (Microsoft, GitHub)
+## Deferred to Horizon 1
+
+- Multi-SSO provider support (Microsoft, password-based auth)
+- CodeMirror 6 editor upgrade for better editing experience
 - Advanced features: diagrams (Mermaid), offline editing, granular permissions
 - Version history UI and diff visualization
 - Performance optimization and caching strategies
+- Comment highlighting in editor with Yjs position tracking
+- Production deployment configuration

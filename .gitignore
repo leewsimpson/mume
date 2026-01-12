@@ -6,6 +6,10 @@ dist/
 build/
 *.tsbuildinfo
 
+# TypeScript declaration files for config (auto-generated)
+vite.config.d.ts
+vite.config.js
+
 # Environment files
 .env
 .env.*
