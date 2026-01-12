@@ -95,3 +95,88 @@ cd apps/frontend && npm test
 
 ## Full Details
 See `progress-poc.txt` for complete iteration-by-iteration progress log with detailed learnings.
+
+## 2026-01-12 20:05 - US-MVP-009
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented complete GitHub service layer with Octokit integration
+- Created GitHubService class in apps/api/src/services/github.service.ts
+- Installed octokit package (version 5.0.5) with 33 dependencies
+- Implemented all required methods:
+  - listUserRepositories: Fetches repos with write access, filters by push permission, returns filtered list
+  - getRepositoryTree: Gets recursive file tree from default branch using git/trees API
+  - getFileContent: Fetches file content and decodes Base64 automatically
+  - updateFile: Updates existing file with conflict detection (409 handling)
+  - createFile: Creates new file (separate from update for clarity)
+- Added retry logic with exponential backoff for rate limit errors (403)
+  - Base delay: 1 second, exponential growth: 2x per attempt, max retries: 3
+  - Logs warnings on rate limit with attempt count
+- Implemented structured logging throughout:
+  - Uses optional Logger interface for dependency injection
+  - Logs: info for operations, warn for retries, error for failures, metric for duration tracking
+  - Includes contextual properties: owner, repo, path, operation, etc.
+- Implemented in-memory caching with 5-minute TTL:
+  - Caches repository lists by token (first 10 chars as key)
+  - Cache entry structure: { data, expiresAt }
+  - Provides clearCache() and clearAllCache() methods
+- Refactored service to support dependency injection:
+  - Constructor accepts optional Octokit factory function
+  - Enables testing without mocking modules (cleaner than ESM module mocking)
+  - Default factory creates real Octokit instances for production use
+- Configured Jest for backend testing:
+  - Installed jest, @types/jest, ts-jest, @jest/globals, cross-env
+  - Created jest.config.js with ESM support (experimental VM modules)
+  - Updated tsconfig.json to add isolatedModules: true
+  - Updated package.json test scripts to use cross-env NODE_OPTIONS=--experimental-vm-modules
+  - Configured transformIgnorePatterns to handle octokit ESM modules
+- Created comprehensive unit tests (17 tests):
+  - Tests for listUserRepositories: write access filter, caching, logging, error handling, retry logic
+  - Tests for getRepositoryTree: recursive fetch, error handling
+  - Tests for getFileContent: Base64 decoding, special characters (emoji, non-ASCII), error handling
+  - Tests for updateFile: Base64 encoding, conflict error (409)
+  - Tests for createFile: Base64 encoding, file exists error (422)
+  - Tests for cache management: clearCache, clearAllCache
+  - All tests use dependency injection with mocked Octokit instance
+  - 100% test coverage, all assertions passing
+- Files changed:
+  - apps/api/src/services/github.service.ts (refactored for DI)
+  - apps/api/tests/github.service.test.ts (comprehensive tests)
+  - apps/api/package.json (added test dependencies)
+  - apps/api/jest.config.js (Jest configuration)
+  - apps/api/tsconfig.json (added isolatedModules)
+- All acceptance criteria met: ✅
+  - ✅ octokit package installed
+  - ✅ GitHubService class created
+  - ✅ All methods implemented (list, get tree, get content, update, create)
+  - ✅ Authenticated Octokit instances per token
+  - ✅ Retry logic with exponential backoff for 403
+  - ✅ Error handling for 404, 409, 403
+  - ✅ Structured logging with req.logger interface
+  - ✅ In-memory cache with 5-minute TTL
+  - ✅ Typecheck passes
+  - ✅ Unit tests with mocked responses (17 tests, all passing)
+- Typecheck passes: npm run build succeeded
+- All tests pass: 17 passed, 0 failed
+- Committed: 7e16b1d "feat: US-MVP-009 - Implement GitHub service layer with Octokit"
+- Updated PRD: US-MVP-009 marked as passes: true
+
+**Learnings for future iterations:**
+- Dependency injection pattern is superior to ESM module mocking for testability
+- Jest with ESM modules requires NODE_OPTIONS=--experimental-vm-modules flag
+- cross-env package ensures cross-platform compatibility for environment variables
+- isolatedModules: true required in tsconfig.json for ts-jest with NodeNext module
+- Octokit factory pattern: constructor accepts optional (token: string) => Octokit function
+- Logger interface pattern: optional parameter in service methods for flexible logging
+- In-memory cache pattern: Map<string, CacheEntry<T>> with expiresAt timestamp
+- Exponential backoff formula: BASE_DELAY * Math.pow(2, attempt - 1)
+- Retry logic checks error.status property to identify rate limit errors (403)
+- GitHub API patterns:
+  - repos.listForAuthenticatedUser with affiliation filter
+  - repos.get to fetch default branch before getting tree
+  - git.getTree with recursive=true for full file tree
+  - repos.getContent returns Base64-encoded content
+  - repos.createOrUpdateFileContents works for both create and update (SHA distinguishes)
+- Type definitions for GitHub responses should match actual API response structure
+- Buffer.from(content).toString('base64') for encoding, Buffer.from(encoded, 'base64').toString('utf-8') for decoding
+- **CRITICAL**: Previous Ralph iterations already installed Jest and created test infrastructure - check git history before reinstalling
+- **PATTERN**: Service layer should accept logger as optional parameter for flexible logging in route handlers
+---
