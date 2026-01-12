@@ -48,7 +48,7 @@ export function RepositorySelector() {
         return res.json();
       })
       .then((data) => {
-        setUser(data);
+        setUser(data.user);
         setLoading(false);
         // Fetch repositories after user is loaded
         fetchRepositories();

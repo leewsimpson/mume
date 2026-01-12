@@ -29,6 +29,11 @@ nul
 # Test coverage
 coverage/
 
+# Playwright E2E tests
+tests/.auth/
+tests/playwright-report/
+tests/test-results/
+
 # IDE
 .vscode/
 .idea/
