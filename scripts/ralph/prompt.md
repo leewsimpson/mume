@@ -7,7 +7,7 @@ You are an autonomous coding agent working on a software project.
 1. Read the PRD at `prd.json` (in the same directory as this file)
 2. Read the progress log at `progress.txt` (check Codebase Patterns section first)
 3. Check you're on the correct branch from PRD `branchName`. If not, check it out or create from main.
-4. Pick the **highest priority** user story where `passes: false`
+4. Pick the **highest priority** user story where `passes: false`, and phase is `MVP`.
 5. Implement that single user story **completely**
 6. Run quality checks (e.g., typecheck, lint, test - use whatever your project requires)
 7. **CRITICAL**: Verify ALL acceptance criteria are met using automated testing
@@ -16,8 +16,6 @@ You are an autonomous coding agent working on a software project.
 10. **ONLY IF FULLY COMPLETE**: Update the PRD to set `passes: true` for the completed story
 11. Append your progress to `progress.txt` with detailed notes
 
-
-### ** NOTE - Although progress suggests that streaming mode can't prohibit the use of testing using the browser, you now need to revise these stories to use automated testing **
 
 ## IMPORTANT: Story Completion Rules
 

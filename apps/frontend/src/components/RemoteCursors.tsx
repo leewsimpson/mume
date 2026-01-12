@@ -21,6 +21,7 @@ interface RemoteCursorsProps {
  */
 export function RemoteCursors({ awareness, textareaRef }: RemoteCursorsProps) {
   const [cursors, setCursors] = useState<CursorPosition[]>([]);
+  const [, forceUpdate] = useState(0);
 
   useEffect(() => {
     if (!awareness) return;
@@ -61,41 +62,115 @@ export function RemoteCursors({ awareness, textareaRef }: RemoteCursorsProps) {
     };
   }, [awareness]);
 
+  // Update cursor positions when textarea scrolls
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    const handleScroll = () => {
+      // Force re-render to recalculate cursor positions with new scroll offset
+      forceUpdate(prev => prev + 1);
+    };
+
+    textarea.addEventListener('scroll', handleScroll);
+
+    return () => {
+      textarea.removeEventListener('scroll', handleScroll);
+    };
+  }, [textareaRef]);
+
   // Calculate cursor positions in pixels
   const getCursorStyle = (cursor: CursorPosition): React.CSSProperties => {
     const textarea = textareaRef.current;
     if (!textarea) return { display: 'none' };
 
-    // Create a temporary div to measure text position
-    const content = textarea.value;
-    const textBeforeCursor = content.substring(0, cursor.position);
+    try {
+      // Use a mirror div technique to accurately measure text position including line wraps
+      const content = textarea.value;
+      const textBeforeCursor = content.substring(0, cursor.position);
 
-    // Count lines before cursor
-    const lines = textBeforeCursor.split('\n');
-    const lineNumber = lines.length - 1;
-    const columnNumber = lines[lines.length - 1]?.length ?? 0;
+      // Create a hidden mirror div with identical styling
+      const mirror = document.createElement('div');
+      const styles = window.getComputedStyle(textarea);
 
-    // Get textarea's computed style
-    const styles = window.getComputedStyle(textarea);
-    const fontSize = parseFloat(styles.fontSize);
-    const lineHeight = parseFloat(styles.lineHeight) || fontSize * 1.2;
-    const paddingTop = parseFloat(styles.paddingTop);
-    const paddingLeft = parseFloat(styles.paddingLeft);
+      // Copy all relevant styles from textarea to mirror
+      const stylesToCopy = [
+        'fontSize', 'fontFamily', 'fontWeight', 'fontStyle',
+        'lineHeight', 'letterSpacing', 'wordSpacing', 'textTransform',
+        'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+        'borderWidth', 'boxSizing', 'wordWrap', 'overflowWrap'
+      ];
 
-    // Approximate character width (monospace font)
-    const charWidth = fontSize * 0.6;
+      stylesToCopy.forEach(prop => {
+        const value = styles[prop as any];
+        if (value !== undefined && value !== null) {
+          mirror.style[prop as any] = value;
+        }
+      });
 
-    // Calculate position
-    const top = paddingTop + lineNumber * lineHeight;
-    const left = paddingLeft + columnNumber * charWidth;
+      // Set width explicitly
+      mirror.style.width = `${textarea.clientWidth}px`;
 
-    return {
-      position: 'absolute',
-      top: `${top}px`,
-      left: `${left}px`,
-      pointerEvents: 'none',
-      zIndex: 10,
-    };
+      // Additional styles for mirror
+      mirror.style.position = 'absolute';
+      mirror.style.top = '-9999px'; // Off-screen but still rendered
+      mirror.style.left = '-9999px';
+      mirror.style.visibility = 'hidden';
+      mirror.style.height = 'auto';
+      mirror.style.overflow = 'hidden';
+      mirror.style.whiteSpace = 'pre-wrap';
+      mirror.style.wordWrap = 'break-word';
+      mirror.style.pointerEvents = 'none';
+
+      // Add text before cursor
+      const textNode = document.createTextNode(textBeforeCursor);
+      mirror.appendChild(textNode);
+
+      // Add a marker span at the cursor position
+      const marker = document.createElement('span');
+      marker.textContent = '|';
+      marker.style.display = 'inline';
+      mirror.appendChild(marker);
+
+      // Temporarily add mirror to DOM for measurement
+      document.body.appendChild(mirror);
+
+      // Force layout calculation
+      mirror.offsetHeight;
+
+      // Get marker position
+      const markerRect = marker.getBoundingClientRect();
+      const mirrorRect = mirror.getBoundingClientRect();
+
+      // Calculate relative position from mirror top-left
+      // The mirror already has padding, so the marker position includes padding offset
+      const top = markerRect.top - mirrorRect.top;
+      const left = markerRect.left - mirrorRect.left;
+
+      // Clean up
+      document.body.removeChild(mirror);
+
+      // Validate position values
+      if (isNaN(top) || isNaN(left)) {
+        console.warn('Invalid cursor position calculated:', { top, left, cursor });
+        return { display: 'none' };
+      }
+
+      // Adjust for textarea scroll position
+      const adjustedTop = top - textarea.scrollTop;
+      const adjustedLeft = left - textarea.scrollLeft;
+
+      return {
+        position: 'absolute',
+        top: `${adjustedTop}px`,
+        left: `${adjustedLeft}px`,
+        pointerEvents: 'none',
+        zIndex: 10,
+      };
+    } catch (error) {
+      console.error('Error calculating cursor position:', error);
+      return { display: 'none' };
+    }
   };
 
   return (

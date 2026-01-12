@@ -11,7 +11,18 @@
       "Bash(powershell -Command \"[Security.Principal.WindowsIdentity]::GetCurrent\\(\\).Groups -contains ''S-1-5-32-544''\")",
       "Bash(echo:*)",
       "Bash(taskkill:*)",
-      "Bash(timeout /t 3)"
+      "Bash(timeout /t 3)",
+      "Bash(npx tsc:*)",
+      "Bash(npm test:*)",
+      "Bash(timeout /t:*)",
+      "Bash(ping:*)",
+      "Skill(dev-browser)",
+      "Bash(./server.sh:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)",
+      "mcp__context7__resolve-library-id",
+      "mcp__context7__query-docs"
     ],
     "additionalDirectories": [
       "c:\\Github\\multi-user-markdown-editor"

@@ -2,6 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { EditorLayout } from '../src/components/EditorLayout';
 
+// Mock react-resizable-panels to avoid test environment issues
+vi.mock('react-resizable-panels', () => ({
+  Panel: ({ children }: { children: React.ReactNode }) => <div className="mock-panel">{children}</div>,
+  Group: ({ children }: { children: React.ReactNode }) => <div className="mock-group">{children}</div>,
+  Separator: ({ className }: { className?: string }) => <div className={className || 'mock-separator'}></div>
+}));
+
 // Mock all child components
 vi.mock('../src/hooks/useYjsProvider', () => ({
   useYjsProvider: vi.fn(() => ({

@@ -2,28 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
-import * as Y from 'yjs';
 import { setupWSConnection } from 'y-websocket/bin/utils';
 
 // Environment configuration
 const PORT = process.env.PORT ?? '3000';
 const FRONTEND_URL = process.env.FRONTEND_URL ?? 'http://localhost:5173';
-
-// In-memory document store
-const documents = new Map<string, Y.Doc>();
-
-/**
- * Get or create a Y.Doc for a given document room
- */
-function getYDoc(docName: string): Y.Doc {
-  let doc = documents.get(docName);
-  if (!doc) {
-    doc = new Y.Doc();
-    documents.set(docName, doc);
-    console.log(`Created new document: ${docName}`);
-  }
-  return doc;
-}
 
 // Create Express app
 const app = express();
@@ -38,8 +21,7 @@ app.use(cors({
 app.get('/health', (_req, res) => {
   res.json({
     status: 'ok',
-    timestamp: new Date().toISOString(),
-    documents: documents.size
+    timestamp: new Date().toISOString()
   });
 });
 
@@ -56,11 +38,8 @@ wss.on('connection', (ws, req) => {
 
   console.log(`WebSocket connection established for document: ${docName}`);
 
-  // Get or create the Y.Doc for this document
-  // Note: getYDoc ensures document persistence in memory
-  getYDoc(docName);
-
   // Setup WebSocket connection with y-websocket utilities
+  // Note: setupWSConnection handles document creation and awareness cleanup automatically
   setupWSConnection(ws, req, { docName, gc: true });
 });
 

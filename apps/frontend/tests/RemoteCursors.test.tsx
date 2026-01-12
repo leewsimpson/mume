@@ -300,4 +300,233 @@ describe('RemoteCursors', () => {
     // Component should render without crashing
     expect(screen.getByText('Alice')).toBeInTheDocument();
   });
+
+  it('should handle cursor on wrapped lines (line break due to width)', () => {
+    // Create a narrower textarea that will cause line wrapping
+    const textarea = document.createElement('textarea');
+    textarea.value = 'This is a very long line of text that will definitely wrap when the browser width is less than the line width and will cause soft line breaks';
+    textarea.style.fontSize = '16px';
+    textarea.style.lineHeight = '20px';
+    textarea.style.paddingTop = '10px';
+    textarea.style.paddingLeft = '10px';
+    textarea.style.width = '200px'; // Narrow width to force wrapping
+    textarea.style.fontFamily = "'Courier New', Courier, monospace";
+    textarea.style.whiteSpace = 'pre-wrap';
+    textarea.style.wordWrap = 'break-word';
+    document.body.appendChild(textarea);
+
+    const mockTextareaRef = { current: textarea };
+
+    const states = mockAwareness.getStates();
+    // Position cursor in the middle of a long line that will wrap
+    states.set(2, {
+      name: 'Alice',
+      color: '#FF6B6B',
+      cursor: { position: 50, selectionStart: 50, selectionEnd: 50 },
+    });
+
+    render(<RemoteCursors awareness={mockAwareness} textareaRef={mockTextareaRef} />);
+
+    // Remote user's cursor should be displayed even on wrapped lines
+    expect(screen.getByText('Alice')).toBeInTheDocument();
+
+    // Clean up
+    document.body.removeChild(textarea);
+  });
+
+  it('should position cursor correctly on second visual line of wrapped text', () => {
+    // Create a narrow textarea that will force wrapping
+    const textarea = document.createElement('textarea');
+    textarea.value = 'This is a very long line of text that will definitely wrap when the browser width is narrow and should trigger soft line breaks';
+    textarea.style.fontSize = '16px';
+    textarea.style.lineHeight = '20px';
+    textarea.style.paddingTop = '10px';
+    textarea.style.paddingLeft = '10px';
+    textarea.style.width = '200px'; // Force line wrapping
+    textarea.style.fontFamily = 'monospace';
+    textarea.style.whiteSpace = 'pre-wrap';
+    textarea.style.wordWrap = 'break-word';
+    document.body.appendChild(textarea);
+
+    const wrappedTextareaRef = { current: textarea };
+
+    const states = mockAwareness.getStates();
+    // Position cursor at character 50 (likely to be on a wrapped line)
+    states.set(2, {
+      name: 'Alice',
+      color: '#FF6B6B',
+      cursor: { position: 50, selectionStart: 50, selectionEnd: 50 },
+    });
+
+    render(<RemoteCursors awareness={mockAwareness} textareaRef={wrappedTextareaRef} />);
+
+    const cursor = screen.getByText('Alice').parentElement;
+    expect(cursor).toBeInTheDocument();
+    expect(cursor).toHaveClass('remote-cursor');
+
+    // Clean up
+    document.body.removeChild(textarea);
+  });
+
+  it('should handle cursor position at the end of a wrapped line', () => {
+    // Create a textarea with constrained width to force wrapping
+    const textarea = document.createElement('textarea');
+    textarea.value = 'This is a very long line of text that should definitely wrap when the browser width is less than the line width and will test our cursor positioning';
+    textarea.style.fontSize = '16px';
+    textarea.style.lineHeight = '20px';
+    textarea.style.paddingTop = '10px';
+    textarea.style.paddingLeft = '10px';
+    textarea.style.width = '200px'; // Narrow width to force wrapping
+    textarea.style.fontFamily = 'monospace';
+    document.body.appendChild(textarea);
+
+    const wrappedTextareaRef = { current: textarea };
+
+    const states = mockAwareness.getStates();
+    // Position cursor at middle of long line that will wrap
+    states.set(2, {
+      name: 'Alice',
+      color: '#FF6B6B',
+      cursor: { position: 50, selectionStart: 50, selectionEnd: 50 },
+    });
+
+    render(<RemoteCursors awareness={mockAwareness} textareaRef={wrappedTextareaRef} />);
+
+    const label = screen.getByText('Alice');
+    expect(label).toBeInTheDocument();
+
+    // The cursor should be positioned somewhere on the page (not hidden)
+    const cursorElement = label.parentElement;
+    expect(cursorElement).toHaveStyle({ position: 'absolute' });
+    expect(cursorElement).not.toHaveStyle({ display: 'none' });
+
+    // Clean up
+    document.body.removeChild(textarea);
+  });
+
+  it('should position cursor correctly on wrapped line', () => {
+    // Create a textarea with narrow width to force wrapping
+    const textarea = document.createElement('textarea');
+    textarea.value = 'This is a very long line that will definitely wrap when the browser width is narrow and we have a small textarea width';
+    textarea.style.width = '200px'; // Force narrow width to cause wrapping
+    textarea.style.fontSize = '16px';
+    textarea.style.lineHeight = '20px';
+    textarea.style.paddingTop = '10px';
+    textarea.style.paddingLeft = '10px';
+    textarea.style.fontFamily = 'monospace';
+    textarea.style.whiteSpace = 'pre-wrap';
+    textarea.style.wordWrap = 'break-word';
+    document.body.appendChild(textarea);
+
+    const wrappedTextareaRef = { current: textarea };
+
+    // Set cursor position in the middle of a long line that will wrap
+    const states = mockAwareness.getStates();
+    states.set(2, {
+      name: 'Alice',
+      color: '#FF6B6B',
+      cursor: { position: 50, selectionStart: 50, selectionEnd: 50 },
+    });
+
+    render(<RemoteCursors awareness={mockAwareness} textareaRef={wrappedTextareaRef} />);
+
+    const cursor = screen.getByText('Alice').parentElement;
+    expect(cursor).toBeInTheDocument();
+    // Cursor should be positioned correctly even with line wrapping
+    expect(cursor).toHaveStyle({ position: 'absolute' });
+
+    // Clean up
+    document.body.removeChild(textarea);
+  });
+
+  it('should handle cursor position after line breaks (newlines)', () => {
+    // Create textarea with explicit newline characters
+    const textarea = document.createElement('textarea');
+    textarea.value = 'Welcome to the Markdown Editor\n\nStart typing to see the preview update in real-time. xxx\nThis works better for sure, but not foolproof.';
+    textarea.style.fontSize = '16px';
+    textarea.style.lineHeight = '20px';
+    textarea.style.paddingTop = '10px';
+    textarea.style.paddingLeft = '10px';
+    textarea.style.fontFamily = "'Courier New', Courier, monospace";
+    textarea.style.width = '400px';
+    textarea.style.height = '200px';
+    document.body.appendChild(textarea);
+
+    const textareaRef = { current: textarea };
+
+    const states = mockAwareness.getStates();
+    // Position 65 is on line 3 after "Start typing to see the preview update in"
+    states.set(2, {
+      name: 'Alice',
+      color: '#FF6B6B',
+      cursor: { position: 65, selectionStart: 65, selectionEnd: 65 },
+    });
+
+    render(<RemoteCursors awareness={mockAwareness} textareaRef={textareaRef} />);
+
+    const cursor = screen.getByText('Alice').parentElement;
+    expect(cursor).toBeInTheDocument();
+    expect(cursor).toHaveClass('remote-cursor');
+
+    // Verify cursor has absolute positioning
+    expect(cursor).toHaveStyle({ position: 'absolute' });
+
+    // Clean up
+    document.body.removeChild(textarea);
+  });
+
+  it('should adjust cursor position when textarea is scrolled', () => {
+    // Create a textarea with scrollable content
+    const textarea = document.createElement('textarea');
+    textarea.value = 'Line 1\nLine 2\nLine 3\nLine 4\nLine 5\nLine 6\nLine 7\nLine 8\nLine 9\nLine 10\nLine 11\nLine 12';
+    textarea.style.fontSize = '16px';
+    textarea.style.lineHeight = '20px';
+    textarea.style.paddingTop = '10px';
+    textarea.style.paddingLeft = '10px';
+    textarea.style.fontFamily = 'monospace';
+    textarea.style.width = '400px';
+    textarea.style.height = '100px'; // Small height to force scrolling
+    textarea.style.overflow = 'auto';
+    document.body.appendChild(textarea);
+
+    const textareaRef = { current: textarea };
+
+    const states = mockAwareness.getStates();
+    // Position on Line 8
+    states.set(2, {
+      name: 'Alice',
+      color: '#FF6B6B',
+      cursor: { position: 56, selectionStart: 56, selectionEnd: 56 },
+    });
+
+    const { rerender } = render(<RemoteCursors awareness={mockAwareness} textareaRef={textareaRef} />);
+
+    const cursorBefore = screen.getByText('Alice').parentElement;
+    expect(cursorBefore).toBeInTheDocument();
+
+    // Get position before scroll
+    const styleBefore = window.getComputedStyle(cursorBefore!);
+    const topBefore = styleBefore.top;
+
+    // Scroll the textarea down
+    act(() => {
+      textarea.scrollTop = 100;
+      // Trigger scroll event
+      textarea.dispatchEvent(new Event('scroll', { bubbles: true }));
+    });
+
+    // Force re-render
+    rerender(<RemoteCursors awareness={mockAwareness} textareaRef={textareaRef} />);
+
+    // Get position after scroll
+    const cursorAfter = screen.getByText('Alice').parentElement;
+    const styleAfter = window.getComputedStyle(cursorAfter!);
+    const topAfter = styleAfter.top;
+
+    // Position should be different after scrolling
+    expect(topAfter).not.toBe(topBefore);
+
+    // Clean up
+    document.body.removeChild(textarea);
+  });
 });

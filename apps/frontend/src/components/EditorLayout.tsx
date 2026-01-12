@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useYjsProvider } from '../hooks/useYjsProvider';
 import { MarkdownEditor } from './MarkdownEditor';
 import { MarkdownPreview } from './MarkdownPreview';
@@ -56,16 +57,23 @@ export function EditorLayout({ userName, documentId }: EditorLayoutProps) {
         </div>
       )}
       <div className="editor-content">
-        <div className="editor-pane">
-          <MarkdownEditor
-            ytext={ytext}
-            awareness={awareness}
-            initialContent="# Welcome to the Markdown Editor\n\nStart typing to see the preview update in real-time."
-          />
-        </div>
-        <div className="preview-pane">
-          <MarkdownPreview content={markdown} />
-        </div>
+        <Group orientation="horizontal">
+          <Panel defaultSize={50} minSize={20}>
+            <div className="editor-pane">
+              <MarkdownEditor
+                ytext={ytext}
+                awareness={awareness}
+                initialContent="# Welcome to the Markdown Editor\n\nStart typing to see the preview update in real-time."
+              />
+            </div>
+          </Panel>
+          <Separator className="resize-handle" />
+          <Panel defaultSize={50} minSize={20}>
+            <div className="preview-pane">
+              <MarkdownPreview content={markdown} />
+            </div>
+          </Panel>
+        </Group>
       </div>
     </div>
   );

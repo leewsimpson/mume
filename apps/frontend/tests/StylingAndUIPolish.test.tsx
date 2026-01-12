@@ -2,6 +2,13 @@ import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
 import { EditorLayout } from '../src/components/EditorLayout';
 
+// Mock react-resizable-panels to avoid test environment issues
+vi.mock('react-resizable-panels', () => ({
+  Panel: ({ children }: { children: React.ReactNode }) => <div className="mock-panel">{children}</div>,
+  Group: ({ children }: { children: React.ReactNode }) => <div className="mock-group">{children}</div>,
+  Separator: ({ className }: { className?: string }) => <div className={className || 'mock-separator'}></div>
+}));
+
 // Mock useYjsProvider
 vi.mock('../src/hooks/useYjsProvider', () => ({
   useYjsProvider: vi.fn(() => ({
@@ -61,12 +68,18 @@ describe('US-014: Styling and UI Polish', () => {
     expect(previewPane).toBeInTheDocument();
   });
 
-  it('should have visible divider between panes (editor-pane has border-right)', () => {
+  it('should have visible divider between panes (resize handle)', () => {
     const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     const editorPane = container.querySelector('.editor-pane');
+    const previewPane = container.querySelector('.preview-pane');
     expect(editorPane).toBeInTheDocument();
-    expect(editorPane).toHaveClass('editor-pane');
+    expect(previewPane).toBeInTheDocument();
+
+    // Check for resize handle (Separator component) between panes
+    const resizeHandle = container.querySelector('.resize-handle');
+    expect(resizeHandle).toBeInTheDocument();
+    expect(resizeHandle).toHaveClass('resize-handle');
   });
 
   it('should have textarea with monospace font class', () => {

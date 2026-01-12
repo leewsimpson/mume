@@ -179,7 +179,7 @@ export function MarkdownEditor({ ytext, awareness, initialContent = '' }: Markdo
   };
 
   return (
-    <div className="editor-container" style={{ position: 'relative' }}>
+    <div className="editor-container">
       <textarea
         ref={textareaRef}
         className="markdown-textarea"

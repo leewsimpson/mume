@@ -160,9 +160,18 @@ describe('useYjsProvider hook', () => {
     });
   });
 
-  it('should set local awareness state with user name and color', () => {
-    renderHook(() => useYjsProvider('test-doc', 'Charlie', 'ws://localhost:3000'));
+  it('should set local awareness state only after connection is established', async () => {
+    const { result } = renderHook(() => useYjsProvider('test-doc', 'Charlie', 'ws://localhost:3000'));
 
+    // Initially, awareness should NOT be set (still connecting)
+    expect(result.current.status).toBe('connecting');
+
+    // Wait for connection to be established
+    await waitFor(() => {
+      expect(result.current.status).toBe('connected');
+    });
+
+    // Now awareness should be set with user name and color
     expect(mockSetLocalState).toHaveBeenCalledWith(
       expect.objectContaining({
         name: 'Charlie',
@@ -171,8 +180,13 @@ describe('useYjsProvider hook', () => {
     );
   });
 
-  it('should generate user color from predefined palette', () => {
-    renderHook(() => useYjsProvider('test-doc', 'Dave', 'ws://localhost:3000'));
+  it('should generate user color from predefined palette', async () => {
+    const { result } = renderHook(() => useYjsProvider('test-doc', 'Dave', 'ws://localhost:3000'));
+
+    // Wait for connection
+    await waitFor(() => {
+      expect(result.current.status).toBe('connected');
+    });
 
     const callArgs = mockSetLocalState.mock.calls[0][0];
     const validColors = [
@@ -218,18 +232,28 @@ describe('useYjsProvider hook', () => {
     expect(mockProviderOn.mock.calls.length).toBeGreaterThan(firstCallCount);
   });
 
-  it('should reinitialize when userName changes', () => {
-    const { rerender } = renderHook(
+  it('should reinitialize when userName changes', async () => {
+    const { result, rerender } = renderHook(
       ({ documentId, userName }) => useYjsProvider(documentId, userName),
       {
         initialProps: { documentId: 'doc1', userName: 'Alice' },
       }
     );
 
+    // Wait for initial connection
+    await waitFor(() => {
+      expect(result.current.status).toBe('connected');
+    });
+
     vi.clearAllMocks();
 
-    // Change userName
+    // Change userName (this will trigger cleanup and reconnection)
     rerender({ documentId: 'doc1', userName: 'Bob' });
+
+    // Wait for reconnection
+    await waitFor(() => {
+      expect(result.current.status).toBe('connected');
+    });
 
     // Awareness state should be updated with new userName
     expect(mockSetLocalState).toHaveBeenCalledWith(
@@ -259,10 +283,15 @@ describe('useYjsProvider hook', () => {
     });
   });
 
-  it('should maintain consistent color across re-renders', () => {
-    const { rerender } = renderHook(() =>
+  it('should maintain consistent color across re-renders', async () => {
+    const { result, rerender } = renderHook(() =>
       useYjsProvider('test-doc', 'Alice', 'ws://localhost:3000')
     );
+
+    // Wait for connection
+    await waitFor(() => {
+      expect(result.current.status).toBe('connected');
+    });
 
     const firstColor = mockSetLocalState.mock.calls[0][0].color;
 
@@ -272,5 +301,78 @@ describe('useYjsProvider hook', () => {
     // Color should be the same (not regenerated)
     const secondColor = mockSetLocalState.mock.calls[0][0].color;
     expect(firstColor).toBe(secondColor);
+  });
+
+  it('should clear awareness state before destroying provider on unmount', async () => {
+    const { result, unmount } = renderHook(() =>
+      useYjsProvider('test-doc', 'Alice', 'ws://localhost:3000')
+    );
+
+    // Wait for connection
+    await waitFor(() => {
+      expect(result.current.status).toBe('connected');
+    });
+
+    vi.clearAllMocks();
+
+    // Unmount the component
+    unmount();
+
+    // Verify awareness state was cleared before destroy
+    expect(mockSetLocalState).toHaveBeenCalledWith(null);
+    expect(mockProviderDestroy).toHaveBeenCalled();
+
+    // Verify setLocalState(null) was called before destroy
+    const setLocalStateCallIndex = mockSetLocalState.mock.invocationCallOrder[0];
+    const destroyCallIndex = mockProviderDestroy.mock.invocationCallOrder[0];
+    expect(setLocalStateCallIndex).toBeLessThan(destroyCallIndex);
+  });
+
+  it('should handle browser refresh scenario without duplicate awareness entries', async () => {
+    // Simulate browser refresh: unmount old instance and mount new instance
+    const { result: oldResult, unmount: oldUnmount } = renderHook(() =>
+      useYjsProvider('test-doc', 'Alice', 'ws://localhost:3000')
+    );
+
+    // Wait for old connection to establish
+    await waitFor(() => {
+      expect(oldResult.current.status).toBe('connected');
+    });
+
+    // Record how many times awareness was set for old connection
+    const oldAwarenessSetCount = mockSetLocalState.mock.calls.length;
+
+    // Simulate browser refresh: unmount (cleanup happens here)
+    oldUnmount();
+
+    // Verify old awareness was cleared
+    expect(mockSetLocalState).toHaveBeenCalledWith(null);
+
+    vi.clearAllMocks();
+
+    // Create new connection (simulating page reload with same user)
+    const { result: newResult } = renderHook(() =>
+      useYjsProvider('test-doc', 'Alice', 'ws://localhost:3000')
+    );
+
+    // Initially connecting
+    expect(newResult.current.status).toBe('connecting');
+
+    // Awareness should NOT be set yet
+    expect(mockSetLocalState).not.toHaveBeenCalled();
+
+    // Wait for new connection to establish
+    await waitFor(() => {
+      expect(newResult.current.status).toBe('connected');
+    });
+
+    // Now awareness should be set (only once, after connection)
+    expect(mockSetLocalState).toHaveBeenCalledTimes(1);
+    expect(mockSetLocalState).toHaveBeenCalledWith(
+      expect.objectContaining({
+        name: 'Alice',
+        color: expect.any(String),
+      })
+    );
   });
 });

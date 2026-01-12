@@ -77,18 +77,18 @@ export function useYjsProvider(
     const awareness = provider.awareness;
     awarenessRef.current = awareness;
 
-    // Set local user state with name and color
-    awareness.setLocalState({
-      name: userName,
-      color: userColorRef.current,
-    });
-
     // Set up connection status listeners
     provider.on('status', (event: { status: string }) => {
       if (event.status === 'connected') {
         setStatus('connected');
         setError(null);
         setReconnectAttempts(0);
+        // Set local user state only after connection is established
+        // This prevents duplicate entries during reconnection/refresh
+        awareness.setLocalState({
+          name: userName,
+          color: userColorRef.current,
+        });
       } else if (event.status === 'connecting') {
         setStatus('connecting');
         setError(null);
