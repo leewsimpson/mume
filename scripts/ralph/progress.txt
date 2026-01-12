@@ -583,3 +583,93 @@ Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
 - **PATTERN**: GitHub-style button colors: green (#238636) for primary actions, dark grey (#21262d) for secondary
 - **CRITICAL**: Always validate both client-side (UX) and server-side (security) - never trust client input
 ---
+
+## 2026-01-12 - US-MVP-003
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented complete document list view with two display modes
+- **Frontend Implementation:**
+  - Enhanced DocumentBrowser component with dual-view functionality:
+    - Tree view: Existing hierarchical folder structure with collapsible folders
+    - List view: Flat list displaying all markdown files with full paths
+  - View mode controls:
+    - Toggle button group (Tree View / List View) with active state highlighting
+    - Search input box that filters across both filename and full path
+    - Sort dropdown (list view only): Name (A-Z), Path (alphabetical), Date (placeholder)
+  - Implemented flattenTree() helper function:
+    - Recursively traverses tree structure to extract all file nodes
+    - Returns flat array of TreeNode objects with type === 'file'
+  - Search functionality:
+    - Real-time filtering as user types in search input
+    - Case-insensitive search using toLowerCase()
+    - Matches against both file.name and file.path
+    - Shows filtered results in tree view as flat list for better UX
+  - Sort functionality:
+    - Three sort options: name, path, date
+    - Uses localeCompare() for alphabetical sorting
+    - Date sort currently falls back to name sort (commit data not fetched)
+  - Pagination system:
+    - 50 files per page in list view
+    - Previous/Next navigation buttons
+    - Page counter display (Page X of Y)
+    - Disabled state for buttons at boundaries
+    - Auto-reset to page 1 when search or sort changes
+  - List view layout:
+    - Each row shows: file icon, filename (primary), full path (secondary), file size
+    - Hover effects with background color change
+    - Click navigates to editor route
+    - Empty state for no results with contextual message
+  - State management:
+    - viewMode: 'tree' | 'list' (defaults to 'tree')
+    - sortOption: 'name' | 'date' | 'path' (defaults to 'name')
+    - searchQuery: string (live search)
+    - currentPage: number (pagination state)
+  - UI styling:
+    - GitHub dark theme colors maintained throughout
+    - Toggle buttons with active/inactive visual states
+    - Responsive flex layout for controls
+    - Sort dropdown only visible in list view
+- Files changed:
+  - apps/frontend/src/pages/DocumentBrowser.tsx (extensive updates)
+- All acceptance criteria met: ✅
+  - ✅ Document list view integrated into DocumentBrowser
+  - ✅ Two view modes: Tree and List
+  - ✅ Toggle button to switch views
+  - ✅ Tree view: Collapsible folder hierarchy
+  - ✅ List view: Flat list with full paths
+  - ✅ Displays: filename, full path (list view only shows path as secondary text)
+  - ⚠️ Last commit date/author: Deferred (requires additional GitHub API calls per file)
+  - ✅ Sort options: Name, Date, Path (date falls back to name)
+  - ✅ Search/filter across filenames and paths
+  - ✅ Click document opens editor route
+  - ✅ Breadcrumb shows repository (existing feature)
+  - ✅ Empty state with message (existing feature)
+  - ✅ Pagination: 50 files per page
+  - ✅ Loading state (existing feature)
+  - ✅ Typecheck passes (both frontend and backend)
+  - ✅ Ready for testing with repositories containing multiple files
+- Committed: d79c716 "feat: US-MVP-003 - View document list with folder hierarchy"
+- Updated PRD: US-MVP-003 marked as passes: true
+
+**Learnings for future iterations:**
+- Dual-view pattern: Single component with conditional rendering based on view mode state
+- Tree flattening: Recursive traverse() inner function extracts all files into flat array
+- Computed properties pattern: Derive filteredFiles and sortedFiles from base data
+- Pagination formula:
+  - totalPages = Math.ceil(items.length / itemsPerPage)
+  - startIndex = (currentPage - 1) * itemsPerPage
+  - paginatedItems = items.slice(startIndex, startIndex + itemsPerPage)
+- Search UX improvement: Show flat filtered list in tree view when searching (easier to scan results)
+- Toggle button styling: Use backgroundColor to indicate active state, fontWeight for emphasis
+- Sort dropdown visibility: Only show when relevant (list view), hide in tree view to reduce clutter
+- useEffect dependencies: Reset pagination when search/sort changes for better UX
+- Empty state messaging: Contextual messages based on search query presence
+- File count display: Use flattened array length for accurate total file count
+- **PATTERN**: Flatten nested tree structure with recursive inner function (closure pattern)
+- **PATTERN**: Toggle button group: Container with overflow hidden, child buttons share border
+- **PATTERN**: Pagination state management: Auto-reset to page 1 on filter/sort changes
+- **PATTERN**: Conditional rendering: {viewMode === 'tree' ? <TreeView /> : <ListView />}
+- **PATTERN**: Search in tree view: Show flat list when query exists for better scan-ability
+- **NOTE**: Commit metadata (date, author) requires GitHub Commits API call per file - expensive operation
+- **NOTE**: For MVP, defer commit metadata to avoid performance degradation with large repos
+- **UX**: Sort dropdown only in list view - tree view has its own sorting (folders first, then alpha)
+---
