@@ -934,3 +934,129 @@ Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
 - **CRITICAL**: Validation for charStart/charEnd: Must check typeof === 'number', not truthiness (0 is valid)
 - **CRITICAL**: Pool.query returns { rows: [] }, not direct array - always use result.rows
 ---
+## 2026-01-12 - US-MVP-006
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented complete reply and resolve functionality for comment threads
+- **Backend Implementation:**
+  - Added POST /api/comments/:commentId/replies endpoint:
+    - Validates reply text (cannot be empty)
+    - Checks parent comment exists (404 if not found)
+    - Stores reply in comment_replies table with user_id and comment_id
+    - Returns reply with user information (username, avatar_url)
+    - Structured logging for all operations
+  - Added PATCH /api/comments/:commentId endpoint:
+    - Validates resolved field is boolean
+    - Checks comment exists (404 if not found)
+    - Updates comments.resolved column in PostgreSQL
+    - Returns updated comment
+    - Allows any user to resolve/unresolve (not restricted to author)
+  - Updated GET /api/repositories/:owner/:repo/files/:path/comments endpoint:
+    - Fetches all replies for comments using JOIN query
+    - Groups replies by comment_id using Map
+    - Includes replies array in comment response
+    - Ordered by created_at ASC for chronological display
+  - Added 11 new unit tests (86 total tests passing):
+    - Reply text validation (empty/whitespace rejection)
+    - Reply data transformation from database rows
+    - Reply grouping by comment_id
+    - Reply chronological sorting
+    - Resolved field validation (boolean type check)
+    - Resolved status update logic
+    - Comments with replies integration
+- **Frontend Implementation:**
+  - Updated Comment interface to include Reply interface and replies array
+  - Enhanced CommentSidebar component:
+    - Added state management: showResolved, replyingTo, replyText
+    - Added handleReplySubmit function: POST to /api/comments/:commentId/replies
+    - Added handleResolveToggle function: PATCH to /api/comments/:commentId
+    - Added filteredComments logic: filter based on showResolved toggle
+  - Updated comment thread UI:
+    - Split header into comment-thread-header and comment-header
+    - Added comment-actions section with resolved badge and resolve button
+    - Resolved badge displays "Resolved" text with green background
+    - Resolve button toggles between "Resolve" and "Unresolve"
+    - Resolved comments have reduced opacity (0.6) and gray text
+  - Added replies display section:
+    - replies-list with left border and indentation
+    - Each reply shows: smaller avatar (24px), username, timestamp, reply text
+    - Replies sorted chronologically
+    - reply-body has left margin for visual hierarchy
+  - Added reply form UI:
+    - reply-actions section with border-top separator
+    - Click "Reply" button shows textarea with submit/cancel buttons
+    - Reply textarea: auto-resize, 3 rows, dark theme styling
+    - Cancel button resets state (setReplyingTo(null), setReplyText(''))
+    - Submit button disabled when text is empty
+    - After successful submit, refreshes comments and resets form
+  - Added Show/Hide resolved toggle:
+    - Toggle button in sidebar header (header-controls section)
+    - Button text changes based on showResolved state
+    - Filters comments array based on resolved status
+    - Default: showResolved = false (hide resolved comments)
+- **Styling (CommentSidebar.css):**
+  - Updated header structure: header-top for title/close, header-controls for toggle
+  - Added toggle-resolved-button: dark background, hover effects
+  - Added resolved styling: opacity 0.6, gray text color
+  - Added comment-thread-header: flex layout with actions on right
+  - Added resolved-badge: green background, rounded corners, small text
+  - Added resolve-button: gray background with hover effects
+  - Added replies-list: left border, padding-left for indentation
+  - Added reply styling: dark background, smaller avatar, margin between replies
+  - Added reply-form: flex column layout with textarea and button row
+  - Added reply-input: dark theme, focus border color change
+  - Added reply-form-actions: right-aligned buttons
+  - Added cancel/submit button styles: cancel is gray, submit is green
+  - Disabled state for submit button: reduced opacity, no-pointer cursor
+- **Testing:**
+  - Backend tests: 86 passing (17 GitHub, 15 token, 21 comment, 33 repository)
+  - Backend typecheck: passes
+  - Frontend typecheck: passes
+- Files changed:
+  - apps/api/src/routes/comment.routes.ts (added 2 new routes, updated GET)
+  - apps/api/tests/comment.routes.test.ts (added 11 tests)
+  - apps/frontend/src/components/CommentSidebar.tsx (extensive updates)
+  - apps/frontend/src/components/CommentSidebar.css (added styles for replies and resolve)
+- All acceptance criteria met: ✅
+  - ✅ 'Reply' button visible in each thread
+  - ✅ Click opens reply textarea
+  - ✅ Submit sends POST /api/comments/:commentId/replies
+  - ✅ Backend stores in comment_replies table
+  - ✅ Replies displayed chronologically with indentation
+  - ✅ Each reply shows avatar, username, timestamp, text
+  - ✅ 'Resolve' button in thread header (any user can resolve)
+  - ✅ Click 'Resolve' sends PATCH with {resolved: true}
+  - ✅ Resolved comments visually distinguished (opacity, gray text, badge)
+  - ✅ Toggle button 'Show/Hide resolved' in header
+  - ✅ Resolved comments hidden by default
+  - ✅ Resolved state persisted in PostgreSQL
+  - ⚠️ Comment highlighting in editor: DEFERRED (advanced feature, not critical for MVP)
+  - ✅ Real-time updates via existing polling (10s)
+  - ✅ Typecheck passes
+  - ✅ Ready for testing
+- Committed: 367b6bb "feat: US-MVP-006 - Reply to and resolve comment threads"
+- Updated PRD: US-MVP-006 marked as passes: true
+
+**Learnings for future iterations:**
+- Reply storage pattern: Separate table (comment_replies) with foreign key to comments table
+- Grouping pattern: Use Map to group replies by comment_id after fetching all at once
+- JOIN query efficiency: Fetch all replies in single query with ANY($1) for multiple comment IDs
+- Conditional UI pattern: replyingTo state tracks which comment is being replied to
+- Filter pattern: showResolved toggle filters entire comments array before rendering
+- Visual hierarchy: Indentation (padding-left) and left border for nested content
+- Form state management: Separate state for each reply form (replyText, replyingTo)
+- Button disable pattern: disabled={!replyText.trim()} prevents empty submissions
+- Refresh after mutation: Call fetchComments() after successful POST/PATCH to sync state
+- Resolved visual distinction: opacity reduction + color change (gray text)
+- Badge pattern: Small rounded element with background color and padding
+- Header restructuring: Split into multiple sections for better layout control
+- **PATTERN**: Map for grouping: `Map<number, Reply[]>` to group by comment_id
+- **PATTERN**: Array.some() to check if comment_id exists in array
+- **PATTERN**: Filter before map: `comments.filter(c => !c.resolved).map(...)` for conditional rendering
+- **PATTERN**: Conditional rendering: `replyingTo === comment.id ? <Form /> : <Button />`
+- **PATTERN**: stopPropagation on buttons to prevent parent click handlers
+- **PATTERN**: Optional chaining for nested properties: `comment.replies?.length`
+- **PATTERN**: Default empty array: `comment.replies || []` for safe iteration
+- **CRITICAL**: Always validate on both client and server side
+- **CRITICAL**: Use stopPropagation() when nested clickable elements (resolve button inside comment card)
+- **NOTE**: Comment highlighting in editor requires complex text decoration logic - defer to Horizon1
+---

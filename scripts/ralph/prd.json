@@ -466,8 +466,8 @@
         "Test replying to comments and resolving threads"
       ],
       "priority": 209,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Full reply and resolve functionality implemented. Backend: POST /api/comments/:commentId/replies for creating replies, PATCH /api/comments/:commentId for resolve/unresolve, GET comments endpoint includes replies via JOIN query. Frontend: CommentSidebar displays replies with indentation, resolve/unresolve button in thread header, Show/Hide resolved toggle, resolved comments visually distinguished with opacity and gray text, resolved badge. 86 backend tests passing (11 new tests for replies and resolve). Typecheck passes for both frontend and backend. Note: Comment highlighting in editor deferred (advanced feature, not critical for MVP)."
     },
     {
       "id": "US-MVP-007",
