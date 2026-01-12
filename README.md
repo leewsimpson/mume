@@ -1,6 +1,6 @@
 # Multi-User Markdown Editor
 
-A real-time collaborative markdown editorr
+A real-time collaborative markdown editorrx
 
 ## Overview
 
