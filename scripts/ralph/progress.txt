@@ -97,7 +97,6 @@ cd apps/frontend && npm test
 See `progress-poc.txt` for complete iteration-by-iteration progress log with detailed learnings.
 
 ## 2026-01-12 20:05 - US-MVP-009
-Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
 - Implemented complete GitHub service layer with Octokit integration
 - Created GitHubService class in apps/api/src/services/github.service.ts
 - Installed octokit package (version 5.0.5) with 33 dependencies

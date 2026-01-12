@@ -1,46 +1,19 @@
-import { useState, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
-import { NamePrompt } from './components/NamePrompt'
-import { EditorLayout } from './components/EditorLayout'
-
-function EditorRoute({ userName }: { userName: string }) {
-  const { documentId } = useParams<{ documentId: string }>()
-
-  // Fallback to 'welcome' if documentId is undefined (shouldn't happen with routing setup)
-  const docId = documentId || 'welcome'
-
-  return <EditorLayout userName={userName} documentId={docId} />
-}
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Login } from './pages/Login';
+import { RepositorySelector } from './pages/RepositorySelector';
 
 function App() {
-  const [userName, setUserName] = useState<string | null>(null)
-
-  // Check sessionStorage for existing name on mount
-  useEffect(() => {
-    const storedName = sessionStorage.getItem('userName')
-    if (storedName) {
-      setUserName(storedName)
-    }
-  }, [])
-
-  const handleNameSubmit = (name: string) => {
-    setUserName(name)
-  }
-
-  // Show NamePrompt if no userName
-  if (!userName) {
-    return <NamePrompt onNameSubmit={handleNameSubmit} />
-  }
-
-  // Show editor interface with routing after name is set
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Navigate to="/doc/welcome" replace />} />
-        <Route path="/doc/:documentId" element={<EditorRoute userName={userName} />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/repositories" element={<RepositorySelector />} />
+        {/* Legacy PoC route - will be replaced in future stories */}
+        <Route path="/doc/:documentId" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
-  )
+  );
 }
 
-export default App
+export default App;
