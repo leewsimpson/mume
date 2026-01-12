@@ -10,6 +10,7 @@ import passport from 'passport';
 import { configurePassport, validateOAuthConfig } from './config/passport.js';
 import { validateEncryptionKey } from './services/token.service.js';
 import authRoutes from './routes/auth.routes.js';
+import repositoryRoutes from './routes/repository.routes.js';
 
 // Environment configuration
 const PORT = process.env.PORT ?? '3000';
@@ -67,6 +68,7 @@ async function bootstrap() {
 
   // Register routes
   app.use('/auth', authRoutes);
+  app.use('/api/repositories', repositoryRoutes);
 
   // Health check endpoint
   app.get('/health', (_req, res) => {
