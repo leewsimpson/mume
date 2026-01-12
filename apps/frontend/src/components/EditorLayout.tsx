@@ -5,14 +5,30 @@ import { MarkdownEditor } from './MarkdownEditor';
 import { MarkdownPreview } from './MarkdownPreview';
 import { UserPresence } from './UserPresence';
 import { ConnectionStatus } from './ConnectionStatus';
+import { SaveStatus } from './SaveStatus';
 
 interface EditorLayoutProps {
   userName: string;
   documentId: string;
+  initialContent?: string;
+  fileSha?: string;
+  owner?: string;
+  repo?: string;
+  filePath?: string;
 }
 
-export function EditorLayout({ userName, documentId }: EditorLayoutProps) {
-  const [markdown, setMarkdown] = useState('# Welcome to the Markdown Editor\n\nStart typing to see the preview update in real-time.');
+export function EditorLayout({
+  userName,
+  documentId,
+  initialContent,
+  fileSha: _fileSha,
+  owner: _owner,
+  repo: _repo,
+  filePath: _filePath,
+}: EditorLayoutProps) {
+  const [markdown, setMarkdown] = useState(
+    initialContent || '# Welcome to the Markdown Editor\n\nStart typing to see the preview update in real-time.'
+  );
 
   // Initialize Yjs provider with document ID from route and user name
   const { ydoc: _ydoc, ytext, provider: _provider, awareness, status, error, reconnectAttempts } = useYjsProvider(documentId, userName);
@@ -43,6 +59,7 @@ export function EditorLayout({ userName, documentId }: EditorLayoutProps) {
     <div className="editor-layout">
       <div className="editor-header">
         <ConnectionStatus status={status} />
+        <SaveStatus status="saved" message="Auto-save enabled (30s)" />
         {status === 'connecting' && reconnectAttempts > 0 && (
           <div className="reconnect-info">
             Reconnecting... (attempt {reconnectAttempts})
@@ -63,7 +80,7 @@ export function EditorLayout({ userName, documentId }: EditorLayoutProps) {
               <MarkdownEditor
                 ytext={ytext}
                 awareness={awareness}
-                initialContent="# Welcome to the Markdown Editor\n\nStart typing to see the preview update in real-time."
+                initialContent={initialContent}
               />
             </div>
           </Panel>

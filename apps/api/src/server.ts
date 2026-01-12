@@ -11,6 +11,7 @@ import { configurePassport, validateOAuthConfig } from './config/passport.js';
 import { validateEncryptionKey } from './services/token.service.js';
 import authRoutes from './routes/auth.routes.js';
 import repositoryRoutes from './routes/repository.routes.js';
+import { startGitHubSyncJob, stopGitHubSyncJob } from './jobs/githubSync.job.js';
 
 // Environment configuration
 const PORT = process.env.PORT ?? '3000';
@@ -103,9 +104,14 @@ async function bootstrap() {
     console.log(`🌐 CORS enabled for: ${FRONTEND_URL}`);
   });
 
+  // Start GitHub sync background job
+  const syncJobInterval = startGitHubSyncJob();
+  console.log('✅ GitHub sync job started');
+
   // Graceful shutdown
   process.on('SIGTERM', async () => {
     console.log('SIGTERM received, closing server...');
+    stopGitHubSyncJob(syncJobInterval);
     await redisClient.quit();
     server.close(() => {
       console.log('Server closed');

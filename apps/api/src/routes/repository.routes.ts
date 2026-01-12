@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { GitHubService } from '../services/github.service.js';
+import { documentStateService } from '../services/documentState.service.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { validateGitHubToken } from '../middleware/validateGitHubToken.js';
 import type { SessionUser } from '../config/passport.js';
@@ -216,6 +217,142 @@ router.get('/:owner/:repo/tree', async (req, res) => {
     }
 
     res.status(500).json({ error: 'Failed to fetch repository tree' });
+  }
+});
+
+/**
+ * POST /api/repositories/:owner/:repo/documents/register
+ * Register a document for automatic GitHub syncing
+ * Called when a user opens a document in the editor
+ */
+router.post('/:owner/:repo/documents/register', async (req, res) => {
+  try {
+    const { owner, repo } = req.params;
+    const { filePath, sha, documentId, userName } = req.body;
+    const user = req.user as SessionUser;
+    const token = res.locals.githubToken as string;
+
+    if (!filePath || !sha || !documentId) {
+      return res.status(400).json({ error: 'Missing required fields: filePath, sha, documentId' });
+    }
+
+    req.logger?.info('Registering document for GitHub sync', {
+      userId: user.id,
+      owner,
+      repo,
+      filePath,
+      documentId,
+      userName,
+      operation: 'registerDocument',
+    });
+
+    // Register document metadata with the document state service
+    documentStateService.registerDocument(
+      documentId,
+      owner,
+      repo,
+      filePath,
+      sha,
+      token
+    );
+
+    // Add user as an editor
+    if (userName) {
+      documentStateService.addEditor(documentId, userName);
+    }
+
+    req.logger?.info('Successfully registered document', {
+      userId: user.id,
+      documentId,
+      operation: 'registerDocument',
+    });
+
+    res.json({ success: true, message: 'Document registered for sync' });
+  } catch (error) {
+    req.logger?.error(
+      'Failed to register document',
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        userId: (req.user as SessionUser)?.id,
+        owner: req.params.owner,
+        repo: req.params.repo,
+        operation: 'registerDocument',
+      }
+    );
+
+    res.status(500).json({ error: 'Failed to register document' });
+  }
+});
+
+/**
+ * GET /api/repositories/:owner/:repo/files/*
+ * Fetch file content and SHA from GitHub
+ * Path parameter should be the full file path (e.g., docs/README.md)
+ */
+router.get('/:owner/:repo/files/*', async (req, res) => {
+  try {
+    const { owner, repo } = req.params;
+    // Extract file path from wildcard param (everything after /files/)
+    const filePath = (req.params as Record<string, string>)['0'];
+    const user = req.user as SessionUser;
+    const token = res.locals.githubToken as string;
+
+    if (!filePath) {
+      return res.status(400).json({ error: 'File path is required' });
+    }
+
+    req.logger?.info('Fetching file content', {
+      userId: user.id,
+      owner,
+      repo,
+      path: filePath,
+      operation: 'getFileContent',
+    });
+
+    const fileData = await githubService.getFileContent(owner, repo, filePath, token, req.logger);
+
+    req.logger?.info('Successfully fetched file content', {
+      userId: user.id,
+      owner,
+      repo,
+      path: filePath,
+      contentLength: fileData.content.length,
+      operation: 'getFileContent',
+    });
+
+    res.json({
+      content: fileData.content,
+      sha: fileData.sha,
+      path: filePath,
+    });
+  } catch (error) {
+    req.logger?.error(
+      'Failed to fetch file content',
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        userId: (req.user as SessionUser)?.id,
+        owner: req.params.owner,
+        repo: req.params.repo,
+        path: (req.params as Record<string, string>)['0'],
+        operation: 'getFileContent',
+      }
+    );
+
+    // Handle specific GitHub API errors
+    if (error instanceof Error && 'status' in error) {
+      const status = (error as { status: number }).status;
+      if (status === 404) {
+        return res.status(404).json({ error: 'File not found' });
+      }
+      if (status === 401) {
+        return res.status(401).json({ error: 'GitHub token is invalid or expired' });
+      }
+      if (status === 403) {
+        return res.status(403).json({ error: 'Rate limit exceeded or insufficient permissions' });
+      }
+    }
+
+    res.status(500).json({ error: 'Failed to fetch file content' });
   }
 });
 
