@@ -127,7 +127,7 @@ describe('EditorLayout Component', () => {
 
     render(<EditorLayout userName="Alice" documentId="doc123" />);
 
-    expect(useYjsProvider).toHaveBeenCalledWith('doc123', 'Alice');
+    expect(useYjsProvider).toHaveBeenCalledWith('doc123', 'Alice', 'ws://localhost:3000', '', '');
   });
 
   it('should render editor container with flex layout that fills parent', () => {

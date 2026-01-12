@@ -18,6 +18,8 @@ export function Editor() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [userName, setUserName] = useState<string>('Anonymous');
+  const [avatarUrl, setAvatarUrl] = useState<string>('');
+  const [githubId, setGithubId] = useState<string>('');
 
   // Fetch user info
   useEffect(() => {
@@ -32,6 +34,8 @@ export function Editor() {
       })
       .then((data) => {
         setUserName(data.username || data.githubId || 'Anonymous');
+        setAvatarUrl(data.avatarUrl || '');
+        setGithubId(data.githubId || '');
       })
       .catch((err) => {
         console.error('Failed to fetch user info:', err);
@@ -157,6 +161,8 @@ export function Editor() {
       owner={owner}
       repo={repo}
       filePath={filePath}
+      avatarUrl={avatarUrl}
+      githubId={githubId}
     />
   );
 }

@@ -15,6 +15,8 @@ interface EditorLayoutProps {
   owner?: string;
   repo?: string;
   filePath?: string;
+  avatarUrl?: string;
+  githubId?: string;
 }
 
 export function EditorLayout({
@@ -25,13 +27,15 @@ export function EditorLayout({
   owner: _owner,
   repo: _repo,
   filePath: _filePath,
+  avatarUrl,
+  githubId,
 }: EditorLayoutProps) {
   const [markdown, setMarkdown] = useState(
     initialContent || '# Welcome to the Markdown Editor\n\nStart typing to see the preview update in real-time.'
   );
 
   // Initialize Yjs provider with document ID from route and user name
-  const { ydoc: _ydoc, ytext, provider: _provider, awareness, status, error, reconnectAttempts } = useYjsProvider(documentId, userName);
+  const { ydoc: _ydoc, ytext, provider: _provider, awareness, status, error, reconnectAttempts } = useYjsProvider(documentId, userName, 'ws://localhost:3000', avatarUrl, githubId);
 
   // Sync markdown state with Y.Text for preview pane
   useEffect(() => {

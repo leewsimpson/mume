@@ -6,6 +6,8 @@ interface User {
   name: string;
   color: string;
   isCurrentUser: boolean;
+  avatarUrl?: string;
+  githubId?: string;
 }
 
 interface UserPresenceProps {
@@ -34,6 +36,8 @@ export function UserPresence({ awareness }: UserPresenceProps) {
             name: state.name,
             color: state.color,
             isCurrentUser: clientId === localClientId,
+            avatarUrl: state.avatarUrl,
+            githubId: state.githubId,
           });
         }
       });
@@ -75,9 +79,34 @@ export function UserPresence({ awareness }: UserPresenceProps) {
             className={`user-badge ${user.isCurrentUser ? 'current-user' : ''}`}
             title={user.isCurrentUser ? `${user.name} (You)` : user.name}
           >
+            {user.avatarUrl ? (
+              <img
+                src={user.avatarUrl}
+                alt={user.name}
+                className="user-avatar"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '50%',
+                  border: `3px solid ${user.color}`,
+                }}
+                onError={(e) => {
+                  // Fallback to colored badge with initials
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = 'none';
+                  const fallback = target.nextElementSibling as HTMLElement;
+                  if (fallback) {
+                    fallback.style.display = 'flex';
+                  }
+                }}
+              />
+            ) : null}
             <span
               className="user-color-indicator"
-              style={{ backgroundColor: user.color }}
+              style={{
+                backgroundColor: user.color,
+                display: user.avatarUrl ? 'none' : 'inline-block',
+              }}
             ></span>
             <span className="user-name">
               {user.name}
