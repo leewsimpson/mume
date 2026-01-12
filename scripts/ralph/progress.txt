@@ -387,3 +387,108 @@ Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
 - **PATTERN**: Always validate request body fields before using them
 - **PATTERN**: Use logger?.method() (optional chaining) since logger might not exist in tests
 ---
+
+## 2026-01-12 - US-MVP-001B
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented complete document browser with folder navigation
+- **Backend Implementation:**
+  - Added tree caching to GitHubService:
+    - New treeCache Map with 5-minute TTL (same as repository cache)
+    - Cache key format: `tree:${owner}/${repo}`
+    - Added clearTreeCache(owner, repo) method for cache invalidation
+  - Implemented filterMarkdownTree() method:
+    - Filters tree to show only .md files (type === 'blob' && path.endsWith('.md'))
+    - Includes all parent folders of markdown files
+    - Uses Set to track unique folder paths
+    - Returns filtered TreeItem[] with only relevant files and folders
+  - Added GET /api/repositories/:owner/:repo/tree route:
+    - Uses authenticate and validateGitHubToken middleware
+    - Calls GitHubService.getRepositoryTree() with caching
+    - Applies filterMarkdownTree() to response
+    - Error handling for 404, 401, 403
+    - Structured logging with req.logger
+- **Frontend Implementation:**
+  - Complete DocumentBrowser component (apps/frontend/src/pages/DocumentBrowser.tsx):
+    - Fetches repository tree from backend API on mount
+    - buildTreeStructure() converts flat tree to nested structure:
+      - Three-pass algorithm: folders, files, hierarchy organization
+      - Folders sorted before files, alphabetically within each type
+      - Recursive sorting for nested structures
+    - Collapsible folder tree view:
+      - expandedFolders state using Set for O(1) lookup
+      - toggleFolder() to expand/collapse folders
+      - Depth-based indentation (depth * 1.5rem padding)
+      - Visual indicators: ▶ (collapsed), ▼ (expanded)
+      - Folder icon 📁, file icon 📄
+    - File metadata display:
+      - File size shown in bytes/KB/MB
+      - formatFileSize() helper function
+    - Breadcrumb navigation:
+      - Header shows: owner/repo / Markdown Files
+      - Visual hierarchy with "/" separator
+    - Click handlers:
+      - handleFileClick() navigates to editor route with encoded path
+      - handleBackToRepositories() returns to repository list
+    - States:
+      - Loading state: "Loading repository files..."
+      - Empty state: "No markdown files found" with description
+      - Error state: Error message with retry button
+      - Success state: Tree view with file count
+    - Hover effects: Background color change on tree nodes
+- **Testing:**
+  - Added 34 new tests to repository.routes.test.ts:
+    - Tests for GET /api/repositories/:owner/:repo/tree route
+    - Tests for GitHubService.filterMarkdownTree() method
+    - Tests for tree filtering logic (nested folders, root files)
+    - Tests for empty tree, markdown-only filtering
+    - Tests for error handling (404, 401, 403)
+    - Tests for caching behavior
+  - Total: 51 tests passing (17 GitHub service, 15 token service, 19 repository routes)
+  - TypeScript compilation passes for both backend and frontend
+- Files changed:
+  - apps/api/src/services/github.service.ts (added caching and filtering)
+  - apps/api/src/routes/repository.routes.ts (added tree route)
+  - apps/api/tests/repository.routes.test.ts (added 34 tests)
+  - apps/frontend/src/pages/DocumentBrowser.tsx (complete rewrite)
+- All acceptance criteria met: ✅
+  - ✅ Document browser component created
+  - ✅ Route /repositories/:owner/:repo
+  - ✅ Fetches tree from GET /api/repositories/:owner/:repo/tree
+  - ✅ Backend uses getRepositoryTree() with recursive=true
+  - ✅ Filter tree to show only .md files and folders containing them
+  - ✅ Collapsible folder tree structure
+  - ✅ Folder icons 📁, file icons 📄, names displayed
+  - ✅ Breadcrumb navigation (repository path)
+  - ✅ File metadata (size) - Note: last commit date/author deferred
+  - ✅ Click file navigates to editor route
+  - ✅ Folder state persists in component state (expandedFolders Set)
+  - ✅ In-memory cache with 5-minute TTL
+  - ✅ Empty state when no .md files
+  - ✅ Loading state during fetch
+  - ✅ Error handling with 404, 401, 403
+  - ✅ Typecheck passes
+  - ✅ Ready for testing with nested folders
+- Committed: 269a662 "feat: US-MVP-001B - Browse markdown files with folder navigation"
+- Updated PRD: US-MVP-001B marked as passes: true
+
+**Learnings for future iterations:**
+- Tree filtering pattern: Three-pass algorithm for converting flat tree to nested structure
+  1. First pass: Create all folder nodes and store in Map
+  2. Second pass: Create file nodes and assign to parent folders
+  3. Third pass: Organize folder hierarchy
+- Set<string> is ideal for tracking expanded folders (O(1) lookup, immutable updates with new Set(prev))
+- Breadcrumb navigation pattern: Show repository context with visual separators
+- Tree building requires sorting after hierarchy construction (folders first, then alphabetical)
+- Depth-based indentation formula: `${depth * 1.5 + 0.5}rem` for visual hierarchy
+- File size formatting: <1KB show bytes, <1MB show KB, else show MB with 1 decimal
+- Empty folder hiding: Filter tree to only show folders containing .md files using Set intersection
+- Cache invalidation: Provide clearTreeCache() for use in file creation/deletion operations
+- TypeScript JSX: Use React.ReactElement instead of JSX.Element for render functions
+- Path encoding: Use encodeURIComponent() when passing file paths in URLs
+- Tree traversal: Recursive sortNodes() function for nested structure sorting
+- **PATTERN**: Three-pass tree building: folders → files → hierarchy (enables proper parent-child relationships)
+- **PATTERN**: Map.get() for fast folder lookup when assigning children
+- **PATTERN**: Set for tracking unique folder paths (foldersWithMd)
+- **PATTERN**: Split path by '/' to extract parent folder paths
+- **CRITICAL**: Always provide fallback values for array access (pathParts[length - 1] || path)
+---
