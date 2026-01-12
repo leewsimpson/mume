@@ -10,7 +10,7 @@
 
 This document captures the key technical decisions and architecture for the multi-user collaborative markdown editor. It focuses on architectural choices, component design, and technology selection rationale.
 
-**Current Status:** Both PoC and MVP phases are complete. The application now includes GitHub OAuth authentication, repository/file management, real-time collaborative editing, automatic GitHub commits, and a complete commenting system.
+**Current Status:** PoC phase complete. MVP phase in progress with comment highlighting feature being added. The application includes GitHub OAuth authentication, repository/file management, real-time collaborative editing, automatic GitHub commits, and a commenting system with visual highlighting.
 
 **Scope:** This is a high-level design document. Detailed implementation patterns are maintained in the codebase itself, following the principle that code is the source of truth for implementation details.
 
@@ -256,7 +256,7 @@ Infrastructure:
 | **Backend** | Express | Express (deferred NestJS) | Kept Express for simplicity |
 | **Auth** | Name-based | GitHub OAuth | Seamless GitHub integration |
 | **Storage** | In-memory | GitHub + PostgreSQL | Documents in GitHub, metadata in PostgreSQL |
-| **Features** | Basic editing | + Document mgmt, comments, avatars, manual save | Core collaborative features complete |
+| **Features** | Basic editing | + Document mgmt, comments, avatars, manual save, comment highlighting | Core collaborative features with visual feedback |
 
 ## Architecture Evolution Considerations
 
@@ -315,6 +315,7 @@ Infrastructure:
 - Comment storage with threading (replies) in PostgreSQL
 - Session management via Redis with express-session
 - Token encryption with AES-256-GCM
+- Comment highlighting in editor with bidirectional navigation (text ↔ sidebar)
 
 ## Deferred to Horizon 1
 
@@ -323,5 +324,4 @@ Infrastructure:
 - Advanced features: diagrams (Mermaid), offline editing, granular permissions
 - Version history UI and diff visualization
 - Performance optimization and caching strategies
-- Comment highlighting in editor with Yjs position tracking
 - Production deployment configuration

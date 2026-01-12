@@ -1,26 +1,114 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useImperativeHandle, forwardRef, useCallback } from 'react';
 import * as Y from 'yjs';
 import type { Awareness } from 'y-protocols/awareness';
 import { RemoteCursors } from './RemoteCursors';
+import { CommentHighlights, type CommentRange } from './CommentHighlights';
 
 interface MarkdownEditorProps {
   ytext: Y.Text | null;
   awareness: Awareness | null;
   initialContent?: string;
   onAddComment?: (charStart: number, charEnd: number, selectedText: string) => void;
+  comments?: CommentRange[];
+  showResolvedComments?: boolean;
+  activeCommentId?: number | null;
+  onHighlightClick?: (commentId: number) => void;
+}
+
+export interface MarkdownEditorRef {
+  scrollToPosition: (charStart: number) => void;
+  pulseHighlight: (commentId: number) => void;
 }
 
 /**
  * Markdown editor component with Yjs bidirectional sync
  * Binds textarea to Y.Text for real-time collaborative editing
  * Tracks cursor position and selection for remote user awareness
+ * Displays comment highlights with bidirectional navigation
  */
-export function MarkdownEditor({ ytext, awareness, initialContent = '', onAddComment }: MarkdownEditorProps) {
+export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>(function MarkdownEditor(
+  { ytext, awareness, initialContent = '', onAddComment, comments = [], showResolvedComments = false, activeCommentId = null, onHighlightClick },
+  ref
+) {
   const [content, setContent] = useState(initialContent);
   const [selection, setSelection] = useState<{ start: number; end: number; text: string } | null>(null);
   const [buttonPosition, setButtonPosition] = useState<{ top: number; left: number } | null>(null);
+  const [pulsingCommentId, setPulsingCommentId] = useState<number | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isLocalChangeRef = useRef(false);
+
+  // Scroll textarea to show a specific character position
+  const scrollToPosition = useCallback((charStart: number) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    // Create a mirror div to calculate the scroll position
+    const content = textarea.value;
+    const textBeforePosition = content.substring(0, charStart);
+
+    const mirror = document.createElement('div');
+    const styles = window.getComputedStyle(textarea);
+
+    // Copy styles
+    const stylesToCopy = [
+      'fontSize', 'fontFamily', 'fontWeight', 'fontStyle',
+      'lineHeight', 'letterSpacing', 'wordSpacing', 'textTransform',
+      'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+      'borderWidth', 'boxSizing', 'wordWrap', 'overflowWrap'
+    ];
+
+    stylesToCopy.forEach(prop => {
+      const value = styles.getPropertyValue(prop.replace(/([A-Z])/g, '-$1').toLowerCase());
+      if (value) {
+        mirror.style.setProperty(prop.replace(/([A-Z])/g, '-$1').toLowerCase(), value);
+      }
+    });
+
+    mirror.style.width = `${textarea.clientWidth}px`;
+    mirror.style.position = 'absolute';
+    mirror.style.top = '-9999px';
+    mirror.style.left = '-9999px';
+    mirror.style.visibility = 'hidden';
+    mirror.style.height = 'auto';
+    mirror.style.overflow = 'hidden';
+    mirror.style.whiteSpace = 'pre-wrap';
+    mirror.style.wordWrap = 'break-word';
+
+    const textNode = document.createTextNode(textBeforePosition);
+    mirror.appendChild(textNode);
+
+    const marker = document.createElement('span');
+    marker.textContent = '|';
+    mirror.appendChild(marker);
+
+    document.body.appendChild(mirror);
+    mirror.offsetHeight;
+
+    const markerRect = marker.getBoundingClientRect();
+    const mirrorRect = mirror.getBoundingClientRect();
+    const targetTop = markerRect.top - mirrorRect.top;
+
+    document.body.removeChild(mirror);
+
+    // Scroll textarea so the target position is visible (centered if possible)
+    const scrollTarget = Math.max(0, targetTop - textarea.clientHeight / 3);
+    textarea.scrollTo({ top: scrollTarget, behavior: 'smooth' });
+  }, []);
+
+  // Pulse a highlight briefly to draw attention
+  const pulseHighlight = useCallback((commentId: number) => {
+    setPulsingCommentId(commentId);
+    // Remove pulse after animation duration
+    setTimeout(() => {
+      setPulsingCommentId(null);
+    }, 1000);
+  }, []);
+
+  // Expose methods via ref
+  useImperativeHandle(ref, () => ({
+    scrollToPosition,
+    pulseHighlight,
+  }), [scrollToPosition, pulseHighlight]);
 
   useEffect(() => {
     if (!ytext) return;
@@ -211,6 +299,9 @@ export function MarkdownEditor({ ytext, awareness, initialContent = '', onAddCom
     }
   };
 
+  // Determine the active comment ID (include pulsing for visual feedback)
+  const effectiveActiveId = pulsingCommentId ?? activeCommentId;
+
   return (
     <div className="editor-container">
       <textarea
@@ -224,6 +315,15 @@ export function MarkdownEditor({ ytext, awareness, initialContent = '', onAddCom
         placeholder="Type your markdown here..."
       />
       <RemoteCursors awareness={awareness} textareaRef={textareaRef} />
+
+      {/* Comment highlights overlay */}
+      <CommentHighlights
+        comments={comments}
+        textareaRef={textareaRef}
+        showResolved={showResolvedComments}
+        activeCommentId={effectiveActiveId}
+        onHighlightClick={onHighlightClick}
+      />
 
       {/* Add Comment button - appears when text is selected */}
       {selection && buttonPosition && (
@@ -243,4 +343,4 @@ export function MarkdownEditor({ ytext, awareness, initialContent = '', onAddCom
       )}
     </div>
   );
-}
+});

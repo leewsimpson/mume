@@ -516,6 +516,33 @@
       "priority": 211,
       "passes": true,
       "notes": "Completed: Full manual save functionality implemented. SaveNowButton component in EditorLayout header, disabled when no unsaved changes. Backend POST /api/repositories/:owner/:repo/documents/:documentId/save route triggers immediate GitHub commit via saveDocumentWithRetry(). Keyboard shortcut Ctrl+S / Cmd+S with preventDefault() to block browser save dialog. Loading state ('Saving...') during save operation. Save status indicator updates to 'saved' on success, 'error' on failure with automatic reset after 2s. Auto-save timer effectively reset by hasUnsavedChanges tracking via Yjs observer. Conflict resolution handled by existing retry logic with exponential backoff. 98+ tests passing. Typecheck passes."
+    },
+    {
+      "id": "US-MVP-012",
+      "phase": "MVP",
+      "title": "Comment highlighting in editor",
+      "description": "As a user, I want to see visual highlights in the editor for text ranges that have comments, so I can easily identify which parts of the document have feedback and navigate between comments and their anchored text.",
+      "acceptanceCriteria": [
+        "CommentHighlights component created: apps/frontend/src/components/CommentHighlights.tsx",
+        "Component receives comments array with charStart, charEnd positions from EditorLayout",
+        "Text ranges with comments are visually highlighted in the editor with semi-transparent background",
+        "Each comment highlight uses a consistent colour (e.g., yellow/amber with 20% opacity)",
+        "Resolved comments shown with different colour (e.g., grey) or hidden based on sidebar 'Show resolved' toggle",
+        "Overlapping comment ranges are handled gracefully (darker combined highlight or stacked colours)",
+        "Clicking a highlighted region in the editor scrolls to and expands the corresponding comment in the sidebar",
+        "Clicking a comment in the sidebar scrolls the editor to the highlighted text and briefly pulses the highlight",
+        "Highlight positions recalculate when textarea content changes (integrate with Yjs text observer)",
+        "Highlight overlay uses mirror-div technique (same as RemoteCursors) for accurate positioning",
+        "Highlights are positioned correctly even when textarea is scrolled",
+        "Highlights do not interfere with text selection or typing in the editor",
+        "Empty state: no highlights shown when document has no comments",
+        "Performance: efficiently render highlights for documents with up to 50 comments",
+        "Typecheck passes",
+        "Unit tests cover: highlight rendering, click navigation, scroll synchronisation, resolved state filtering"
+      ],
+      "priority": 212,
+      "passes": false,
+      "notes": ""
     }
   ]
 }

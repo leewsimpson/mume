@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useYjsProvider } from '../hooks/useYjsProvider';
-import { MarkdownEditor } from './MarkdownEditor';
+import { MarkdownEditor, type MarkdownEditorRef } from './MarkdownEditor';
 import { MarkdownPreview } from './MarkdownPreview';
 import { UserPresence } from './UserPresence';
 import { ConnectionStatus } from './ConnectionStatus';
@@ -9,6 +9,7 @@ import { SaveStatus } from './SaveStatus';
 import { SaveNowButton } from './SaveNowButton';
 import { CommentSidebar, type Comment } from './CommentSidebar';
 import { AddCommentModal } from './AddCommentModal';
+import type { CommentRange } from './CommentHighlights';
 
 interface EditorLayoutProps {
   userName: string;
@@ -48,6 +49,12 @@ export function EditorLayout({
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [comments, setComments] = useState<CommentRange[]>([]);
+  const [showResolvedComments, setShowResolvedComments] = useState(false);
+  const [activeCommentId, setActiveCommentId] = useState<number | null>(null);
+
+  // Ref for MarkdownEditor to enable scroll-to functionality
+  const editorRef = useRef<MarkdownEditorRef>(null);
 
   // Initialize Yjs provider with document ID from route and user name
   const { ydoc: _ydoc, ytext, provider: _provider, awareness, status, error, reconnectAttempts } = useYjsProvider(documentId, userName, 'ws://localhost:3000', avatarUrl, githubId);
@@ -74,6 +81,49 @@ export function EditorLayout({
       ytext.unobserve(observer);
     };
   }, [ytext]);
+
+  // Fetch comments for highlighting
+  const fetchComments = useCallback(async () => {
+    if (!owner || !repo || !filePath) return;
+
+    try {
+      const encodedPath = filePath.split('/').map(encodeURIComponent).join('/');
+      const response = await fetch(
+        `http://localhost:3000/api/repositories/${owner}/${repo}/files/${encodedPath}/comments`,
+        { credentials: 'include' }
+      );
+
+      if (response.ok) {
+        const data: Comment[] = await response.json();
+        // Map to CommentRange for highlighting
+        const commentRanges: CommentRange[] = data.map(c => ({
+          id: c.id,
+          charStart: c.charStart,
+          charEnd: c.charEnd,
+          resolved: c.resolved,
+        }));
+        setComments(commentRanges);
+      }
+    } catch (err) {
+      console.error('Failed to fetch comments for highlighting:', err);
+    }
+  }, [owner, repo, filePath]);
+
+  // Fetch comments on mount and when file changes
+  useEffect(() => {
+    fetchComments();
+  }, [fetchComments]);
+
+  // Poll for comment updates every 10 seconds
+  useEffect(() => {
+    const interval = setInterval(fetchComments, 10000);
+    return () => clearInterval(interval);
+  }, [fetchComments]);
+
+  // Refetch comments when a new comment is added
+  const handleCommentAdded = useCallback(() => {
+    fetchComments();
+  }, [fetchComments]);
 
   // Manual save handler
   const handleSaveNow = useCallback(async () => {
@@ -170,12 +220,39 @@ export function EditorLayout({
 
     // Comment created successfully
     setSelectedRange(null);
+    // Refresh comments for highlighting
+    handleCommentAdded();
   };
 
-  const handleCommentClick = (_comment: Comment) => {
-    // TODO: Scroll to and highlight the commented text in editor
-    // This will be implemented with comment highlighting
-  };
+  // Handle click on comment in sidebar - scroll to highlighted text in editor
+  const handleCommentClick = useCallback((comment: Comment) => {
+    // Scroll to the comment position in the editor
+    editorRef.current?.scrollToPosition(comment.charStart);
+    // Pulse the highlight to draw attention
+    editorRef.current?.pulseHighlight(comment.id);
+    // Set as active for visual feedback
+    setActiveCommentId(comment.id);
+    // Clear active state after a moment
+    setTimeout(() => setActiveCommentId(null), 2000);
+  }, []);
+
+  // Handle click on highlight in editor - open sidebar and scroll to comment
+  const handleHighlightClick = useCallback((commentId: number) => {
+    // Open the sidebar if not already open
+    setIsSidebarOpen(true);
+    // Set the active comment
+    setActiveCommentId(commentId);
+    // Clear active state after a moment
+    setTimeout(() => setActiveCommentId(null), 2000);
+    // Scroll to the comment in the sidebar
+    // Use a small delay to let the sidebar open first
+    setTimeout(() => {
+      const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
+      if (commentElement) {
+        commentElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  }, []);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
@@ -219,10 +296,15 @@ export function EditorLayout({
           <Panel defaultSize={50} minSize={20}>
             <div className="editor-pane">
               <MarkdownEditor
+                ref={editorRef}
                 ytext={ytext}
                 awareness={awareness}
                 initialContent={initialContent}
                 onAddComment={handleAddCommentRequest}
+                comments={comments}
+                showResolvedComments={showResolvedComments}
+                activeCommentId={activeCommentId}
+                onHighlightClick={handleHighlightClick}
               />
             </div>
           </Panel>
@@ -245,6 +327,8 @@ export function EditorLayout({
           filePath={filePath}
           currentUserId={userId}
           onCommentClick={handleCommentClick}
+          showResolved={showResolvedComments}
+          onShowResolvedChange={setShowResolvedComments}
         />
       )}
 

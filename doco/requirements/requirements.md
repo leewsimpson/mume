@@ -8,7 +8,7 @@ A real-time collaborative markdown editor that allows multiple users to edit doc
 
 ### Development Phases
 - **PoC (Proof of Concept):** ✅ **Completed** - Proved real-time collaborative editing works
-- **MVP (Minimum Viable Product):** ✅ **Completed** - GitHub integration, authentication, and comments
+- **MVP (Minimum Viable Product):** 🚧 **In Progress** - GitHub integration, authentication, comments, and comment highlighting
 - **Horizon 1:** 🔮 **Future** - Advanced features and enhancements
 
 ## Goals
@@ -51,14 +51,15 @@ These features are explicitly out of scope:
 - In-memory document storage
 - Supports 3-5 concurrent users
 
-### MVP - Completed ✅
-- GitHub OAuth authentication with encrypted token storage
-- Repository selection and folder navigation
-- Document list and creation UI
-- Automatic GitHub commits with conflict resolution
-- Complete commenting system (add/reply/resolve/delete)
-- GitHub profile avatars in user presence
-- Manual save button with Ctrl+S shortcut
+### MVP - In Progress 🚧
+- GitHub OAuth authentication with encrypted token storage ✅
+- Repository selection and folder navigation ✅
+- Document list and creation UI ✅
+- Automatic GitHub commits with conflict resolution ✅
+- Complete commenting system (add/reply/resolve/delete) ✅
+- GitHub profile avatars in user presence ✅
+- Manual save button with Ctrl+S shortcut ✅
+- Comment highlighting in editor with bidirectional navigation 🚧
 
 ### Horizon 1 - Future 🔮
 - Additional SSO providers (Microsoft, password-based auth)
