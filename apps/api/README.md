@@ -66,15 +66,26 @@ npm start
 
 ## Testing
 
-Run tests:
+The API uses **Jest** as the test framework with ES modules support.
+
+### Test Location
+
+Tests are located in `tests/`:
+
+| File | Description |
+|------|-------------|
+| `comment.routes.test.ts` | Comment API endpoint tests |
+| `repository.routes.test.ts` | Repository API endpoint tests |
+| `token.service.test.ts` | Token encryption/decryption service tests |
+| `github.service.test.ts` | GitHub API integration tests |
+
+### Running Tests
 
 ```bash
+# Run all tests
 npm test
-```
 
-Run tests in watch mode:
-
-```bash
+# Run tests in watch mode
 npm run test:watch
 ```
 

@@ -115,6 +115,27 @@ The frontend runs on port 5173 and provides:
 
 For detailed setup and configuration of each application, see their respective README files.
 
+## Testing
+
+### Running All Tests
+
+```bash
+# Backend tests (Jest)
+cd apps/api && npm test
+
+# Frontend tests (Vitest)
+cd apps/frontend && npm test -- --run
+```
+
+### Test Locations
+
+| Location | Framework | Description |
+|----------|-----------|-------------|
+| `apps/api/tests/` | Jest | API routes, services, GitHub integration |
+| `apps/frontend/tests/` | Vitest | React components, hooks, user flows |
+
+See the README files in each app directory for detailed test documentation.
+
 ## Development Utilities
 
 ### Port Management

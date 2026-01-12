@@ -52,8 +52,8 @@ export async function validateGitHubToken(
       authTag: tokenData.access_token_auth_tag,
     });
 
-    // Attach token to request
-    (req as RequestWithGitHubToken).githubToken = githubToken;
+    // Attach token to res.locals for use in route handlers
+    res.locals.githubToken = githubToken;
 
     next();
   } catch (error) {

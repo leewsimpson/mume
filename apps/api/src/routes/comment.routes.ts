@@ -87,18 +87,20 @@ router.post(
 );
 
 /**
- * GET /api/repositories/:owner/:repo/files/:path/comments
+ * GET /api/repositories/:owner/:repo/files/(.*)/comments
  * Get all comments for a specific document
+ * Note: Uses regex pattern to match nested paths like docs/README.md
  */
 router.get(
-  '/repositories/:owner/:repo/files/**/comments',
+  /^\/repositories\/([^/]+)\/([^/]+)\/files\/(.+)\/comments$/,
   authenticate,
   validateGitHubToken,
   async (req: Request, res: Response) => {
     try {
-      const owner = req.params.owner;
-      const repo = req.params.repo;
-      const filePath = (req.params as Record<string, string>)['0']; // Wildcard path
+      // Extract params from regex groups: [0]=owner, [1]=repo, [2]=filePath
+      const owner = req.params[0];
+      const repo = req.params[1];
+      const filePath = req.params[2];
 
       if (!filePath) {
         return res.status(400).json({ error: 'File path is required' });
