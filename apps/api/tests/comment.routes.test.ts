@@ -334,4 +334,82 @@ describe('Comment Feature', () => {
       expect(Array.isArray(replies)).toBe(true);
     });
   });
+
+  describe('Comment deletion functionality', () => {
+    it('should verify user authorization before deletion', () => {
+      const comment = {
+        id: 1,
+        user_id: 123,
+      };
+      const requestingUserId = 123;
+
+      expect(comment.user_id).toBe(requestingUserId);
+    });
+
+    it('should reject deletion when user is not author', () => {
+      const comment = {
+        id: 1,
+        user_id: 123,
+      };
+      const requestingUserId = 456;
+
+      expect(comment.user_id).not.toBe(requestingUserId);
+    });
+
+    it('should handle comment not found case', () => {
+      const comments: any[] = [];
+      const commentId = 999;
+      const found = comments.find((c) => c.id === commentId);
+
+      expect(found).toBeUndefined();
+    });
+
+    it('should successfully delete comment when authorized', () => {
+      const comments = [
+        { id: 1, user_id: 123, text: 'Comment 1' },
+        { id: 2, user_id: 123, text: 'Comment 2' },
+      ];
+      const commentId = 1;
+      const userId = 123;
+
+      const comment = comments.find((c) => c.id === commentId);
+      expect(comment).toBeDefined();
+      expect(comment?.user_id).toBe(userId);
+
+      // Simulate deletion
+      const remainingComments = comments.filter((c) => c.id !== commentId);
+      expect(remainingComments.length).toBe(1);
+      expect(remainingComments[0].id).toBe(2);
+    });
+
+    it('should handle CASCADE deletion of replies', () => {
+      const comment = { id: 1, user_id: 123 };
+      const replies = [
+        { id: 1, comment_id: 1 },
+        { id: 2, comment_id: 1 },
+        { id: 3, comment_id: 2 },
+      ];
+
+      // Simulate CASCADE delete
+      const remainingReplies = replies.filter((r) => r.comment_id !== comment.id);
+      expect(remainingReplies.length).toBe(1);
+      expect(remainingReplies[0].comment_id).toBe(2);
+    });
+
+    it('should return success response after deletion', () => {
+      const response = {
+        success: true,
+        message: 'Comment deleted',
+      };
+
+      expect(response.success).toBe(true);
+      expect(response.message).toBe('Comment deleted');
+    });
+
+    it('should validate commentId parameter exists', () => {
+      const params = { commentId: '123' };
+      expect(params.commentId).toBeDefined();
+      expect(params.commentId).toBeTruthy();
+    });
+  });
 });

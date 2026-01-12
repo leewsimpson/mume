@@ -39,6 +39,7 @@ interface CommentSidebarProps {
   owner: string;
   repo: string;
   filePath: string;
+  currentUserId?: number;
   onCommentClick?: (comment: Comment) => void;
 }
 
@@ -76,6 +77,7 @@ export function CommentSidebar({
   owner,
   repo,
   filePath,
+  currentUserId,
   onCommentClick,
 }: CommentSidebarProps) {
   const [comments, setComments] = useState<Comment[]>([]);
@@ -84,6 +86,7 @@ export function CommentSidebar({
   const [showResolved, setShowResolved] = useState(false);
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState('');
+  const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
 
   // Fetch comments from backend
   const fetchComments = async () => {
@@ -192,6 +195,40 @@ export function CommentSidebar({
     }
   };
 
+  const handleDeleteComment = async (commentId: number) => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this comment? This action cannot be undone.'
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setDeletingCommentId(commentId);
+      const response = await fetch(
+        `http://localhost:3000/api/comments/${commentId}`,
+        {
+          method: 'DELETE',
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete comment');
+      }
+
+      // Refresh comments
+      await fetchComments();
+      setDeletingCommentId(null);
+    } catch (err) {
+      setDeletingCommentId(null);
+      setError(err instanceof Error ? err.message : 'Failed to delete comment');
+    }
+  };
+
   // Filter comments based on resolved status visibility
   const filteredComments = showResolved
     ? comments
@@ -268,6 +305,19 @@ export function CommentSidebar({
                     <div className="comment-actions">
                       {comment.resolved && (
                         <span className="resolved-badge">Resolved</span>
+                      )}
+                      {currentUserId === comment.userId && (
+                        <button
+                          className="delete-button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteComment(comment.id);
+                          }}
+                          disabled={deletingCommentId === comment.id}
+                          title="Delete comment"
+                        >
+                          {deletingCommentId === comment.id ? '...' : '🗑️'}
+                        </button>
                       )}
                       <button
                         className="resolve-button"

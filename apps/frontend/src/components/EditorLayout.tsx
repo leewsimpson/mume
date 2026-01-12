@@ -19,6 +19,7 @@ interface EditorLayoutProps {
   filePath?: string;
   avatarUrl?: string;
   githubId?: string;
+  userId?: number;
 }
 
 export function EditorLayout({
@@ -31,6 +32,7 @@ export function EditorLayout({
   filePath,
   avatarUrl,
   githubId,
+  userId,
 }: EditorLayoutProps) {
   const [markdown, setMarkdown] = useState(
     initialContent || '# Welcome to the Markdown Editor\n\nStart typing to see the preview update in real-time.'
@@ -168,6 +170,7 @@ export function EditorLayout({
           owner={owner}
           repo={repo}
           filePath={filePath}
+          currentUserId={userId}
           onCommentClick={handleCommentClick}
         />
       )}

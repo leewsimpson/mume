@@ -328,4 +328,63 @@ router.patch(
   }
 );
 
+/**
+ * DELETE /api/comments/:commentId
+ * Delete a comment (only by author)
+ */
+router.delete(
+  '/:commentId',
+  authenticate,
+  validateGitHubToken,
+  async (req: Request, res: Response) => {
+    try {
+      const { commentId } = req.params;
+      const user = req.user as SessionUser;
+      const userId = user?.id;
+
+      // Check if comment exists and get user_id
+      const commentCheck = await pool.query(
+        'SELECT id, user_id FROM comments WHERE id = $1',
+        [commentId]
+      );
+
+      if (commentCheck.rows.length === 0) {
+        return res.status(404).json({
+          error: 'Comment not found'
+        });
+      }
+
+      const comment = commentCheck.rows[0];
+
+      // Verify user is the author
+      if (comment.user_id !== userId) {
+        return res.status(403).json({
+          error: 'You can only delete your own comments'
+        });
+      }
+
+      // Delete comment (CASCADE will delete associated replies)
+      await pool.query(
+        'DELETE FROM comments WHERE id = $1',
+        [commentId]
+      );
+
+      req.logger?.info('Comment deleted successfully', {
+        userId,
+        commentId,
+        operation: 'delete_comment'
+      });
+
+      res.json({ success: true, message: 'Comment deleted' });
+    } catch (error) {
+      req.logger?.error('Failed to delete comment', error as Error, {
+        userId: (req.user as SessionUser)?.id,
+        commentId: req.params.commentId,
+        operation: 'delete_comment'
+      });
+      res.status(500).json({ error: 'Failed to delete comment' });
+    }
+  }
+);
+
 export default router;
