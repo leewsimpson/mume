@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MarkdownEditor } from '../src/components/MarkdownEditor';
 import * as Y from 'yjs';
@@ -145,8 +145,10 @@ describe('Cursor Tracking in MarkdownEditor', () => {
 
     const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
 
-    // Simulate arrow key navigation
-    textarea.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+    // Simulate arrow key navigation - wrap in act() to handle state updates
+    await act(async () => {
+      textarea.dispatchEvent(new KeyboardEvent('keyup', { key: 'ArrowRight', bubbles: true }));
+    });
 
     await waitFor(() => {
       expect(mockAwareness.setLocalState).toHaveBeenCalled();
