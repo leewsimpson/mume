@@ -1,6 +1,6 @@
 # Multi-User Markdown Editor
 
-A real-time collaborative markdown editor built with Yjs, demonstrating multi-user editing capabilities.
+A real-time collaborative markdown editor .
 
 ## Overview
 
