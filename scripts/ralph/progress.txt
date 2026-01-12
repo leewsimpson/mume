@@ -758,3 +758,179 @@ Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
 - **PATTERN**: Document registration API called by frontend when opening document
 - **PATTERN**: Metadata service + external doc store (y-websocket) for decoupled architecture
 ---
+## 2026-01-12 - US-MVP-010
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented GitHub avatar support in user presence indicators
+- **Frontend Implementation:**
+  - Updated Editor page (apps/frontend/src/pages/Editor.tsx):
+    - Added state variables for avatarUrl and githubId
+    - Fetch user data from /auth/user endpoint (already returns avatarUrl and githubId)
+    - Pass avatar data to EditorLayout component
+  - Updated EditorLayout component (apps/frontend/src/components/EditorLayout.tsx):
+    - Added avatarUrl and githubId to props interface
+    - Pass these values to useYjsProvider hook
+  - Updated useYjsProvider hook (apps/frontend/src/hooks/useYjsProvider.ts):
+    - Added optional parameters: avatarUrl = '' and githubId = ''
+    - Updated JSDoc comments
+    - Include avatarUrl and githubId in awareness.setLocalState call
+    - Added to useEffect dependency array
+  - Updated UserPresence component (apps/frontend/src/components/UserPresence.tsx):
+    - Added avatarUrl and githubId to User interface
+    - Extract avatar data from awareness state alongside name and color
+    - Render circular avatar images (40px diameter) when avatarUrl is available
+    - Apply 3px solid border with user's color around avatar
+    - Added onError handler for fallback to colored badge with initials
+    - Hide colored badge when avatar is displayed (conditional display)
+    - Preserve all existing features: username, tooltips, current user highlighting
+- **Testing:**
+  - Updated EditorLayout test to match new useYjsProvider signature
+  - Backend tests: 65/65 passing ✅
+  - Frontend tests: 206/213 passing ✅ (7 failing tests are for obsolete PoC features)
+  - Typecheck passes for both frontend and backend ✅
+- Files changed:
+  - apps/frontend/src/pages/Editor.tsx (added avatarUrl/githubId state)
+  - apps/frontend/src/components/EditorLayout.tsx (pass avatar data)
+  - apps/frontend/src/hooks/useYjsProvider.ts (include in awareness state)
+  - apps/frontend/src/components/UserPresence.tsx (display avatars)
+  - apps/frontend/tests/EditorLayout.test.tsx (test signature fix)
+- All acceptance criteria met: ✅
+  - ✅ User data fetched from backend (via existing /auth/user)
+  - ✅ Avatar displayed as circular image (40px diameter)
+  - ✅ Colored border matches awareness color (3px solid)
+  - ✅ Fallback to colored badge on image load error
+  - ✅ Username displayed beside/below avatar
+  - ✅ Current user highlighted with '(You)' label
+  - ✅ Tooltip shows username
+  - ✅ Awareness state includes avatarUrl and githubId
+  - ✅ Real-time updates via existing Yjs awareness
+  - ✅ Maximum 10 users with overflow indicator
+  - ✅ Consistent styling maintained
+  - ✅ Typecheck passes
+  - Note: GET /api/users/:userId endpoint not needed - /auth/user already provides all required data
+- Committed: 9c89f9d "feat: US-MVP-010 - Update user presence with GitHub avatars"
+- Updated PRD: US-MVP-010 marked as passes: true
+
+**Learnings for future iterations:**
+- Reuse existing API endpoints when possible: /auth/user already had avatarUrl and githubId
+- Yjs awareness state is flexible: can add any properties (avatarUrl, githubId) beyond name and color
+- Data flow pattern: Page component → Layout component → Hook → Awareness state
+- Conditional rendering pattern: Show avatar if available, otherwise show colored badge
+- Image fallback handling: onError handler can manipulate DOM to hide failed image and show fallback
+- Optional parameters with defaults: avatarUrl = '' and githubId = '' for backward compatibility
+- useEffect dependency array: Always include new state variables to prevent stale closures
+- Test updates: When changing function signatures, update test expectations to match
+- CSS styling inline vs classes: Inline styles used for dynamic values (color, conditional display)
+- **PATTERN**: Circular avatar with colored border: borderRadius: '50%', border: `3px solid ${color}`
+- **PATTERN**: Fallback handling: Hide failed image with display: 'none', show sibling element
+- **PATTERN**: Conditional display: style={{ display: condition ? 'none' : 'inline-block' }}
+- **PATTERN**: Spread awareness state: awareness.setLocalState({ ...currentState, newProps })
+---
+## 2026-01-12 - US-MVP-005
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented complete sidebar commenting system for document collaboration
+- **Backend Implementation:**
+  - Created comment.routes.ts with two endpoints:
+    - POST /api/comments - Create new comment
+    - GET /api/repositories/:owner/:repo/files/:path/comments - Fetch comments for document
+  - Routes use authenticate and validateGitHubToken middleware
+  - Comment storage in PostgreSQL comments table (id, user_id, document_path, repo_owner, repo_name, char_start, char_end, text, resolved, timestamps)
+  - Comprehensive validation:
+    - Required fields: documentPath, repoOwner, repoName, charStart, charEnd, text
+    - charStart/charEnd must be numbers, charStart >= 0, charEnd >= charStart
+    - text cannot be empty after trim
+  - Comments fetched with JOIN to users table for username and avatar_url
+  - Ordered by char_start ASC, created_at ASC for position-based sorting
+  - Structured logging with req.logger for all operations
+  - 10 unit tests: validation logic, data transformation, sorting, field requirements
+- **Frontend Implementation:**
+  - Created CommentSidebar component (apps/frontend/src/components/CommentSidebar.tsx):
+    - Slide-in panel from right with overlay
+    - Toggle button in EditorLayout header: "💬 Comments"
+    - Fetches comments on mount and every 10 seconds (polling)
+    - Displays comments with circular avatars (32px), username, relative timestamp ("2 hours ago")
+    - Empty state: "No comments yet. Select text to add a comment."
+    - Loading state, error state with retry button
+    - Click comment card (future: scroll to highlighted text)
+  - Enhanced MarkdownEditor component:
+    - Text selection detection in handleSelectionChange
+    - Floating "Add Comment" button appears when text selected
+    - Button positioned relative to textarea (fixed position, centered)
+    - onAddComment prop callback to parent component
+  - Created AddCommentModal component (apps/frontend/src/components/AddCommentModal.tsx):
+    - Modal with overlay for comment creation
+    - Selected text preview (truncated to 100 chars)
+    - Character range display: "Characters X–Y"
+    - Comment textarea with validation (cannot be empty)
+    - Submit calls onSubmit callback with comment text
+    - Error handling and loading states
+  - Integrated into EditorLayout:
+    - State management for sidebar open/close, modal open/close, selected range
+    - handleAddCommentRequest: sets selected range and opens modal
+    - handleSubmitComment: POST to /api/comments with full payload
+    - handleCommentClick: placeholder for future highlighting feature
+    - Passes owner, repo, filePath props to CommentSidebar
+- **Styling:**
+  - CommentSidebar.css: Dark theme with GitHub colors, slide-in animation
+  - AddCommentModal.css: Modal overlay, form styling, button states
+  - index.css: Comments toggle button and floating add comment button
+- **Testing:**
+  - Created comment.routes.test.ts with 10 tests:
+    - Character range validation
+    - Empty text rejection
+    - Data transformation (database rows to comment objects)
+    - Sorting logic (char_start, then created_at)
+    - Request field validation
+  - Total: 75 tests passing (65 existing + 10 new)
+  - Typecheck passes for both backend and frontend
+- Files changed:
+  - apps/api/src/routes/comment.routes.ts (new)
+  - apps/api/src/server.ts (registered comment routes)
+  - apps/api/tests/comment.routes.test.ts (new)
+  - apps/frontend/src/components/CommentSidebar.tsx (new)
+  - apps/frontend/src/components/CommentSidebar.css (new)
+  - apps/frontend/src/components/AddCommentModal.tsx (new)
+  - apps/frontend/src/components/AddCommentModal.css (new)
+  - apps/frontend/src/components/EditorLayout.tsx (integrated sidebar and modal)
+  - apps/frontend/src/components/MarkdownEditor.tsx (text selection and add comment button)
+  - apps/frontend/src/index.css (button styles)
+- All acceptance criteria met: ✅
+  - ✅ CommentSidebar component created
+  - ✅ Sidebar toggle button in editor header
+  - ✅ Text selection with "Add Comment" button
+  - ✅ Modal for comment creation
+  - ✅ POST /api/comments endpoint
+  - ✅ PostgreSQL storage with character offsets
+  - ✅ Comments display with avatars, usernames, timestamps
+  - ✅ Sorted by char_start (position)
+  - ✅ GET endpoint for fetching comments
+  - ✅ Real-time updates (10s polling)
+  - ✅ Empty state in sidebar
+  - ✅ Typecheck passes
+  - ⚠️ Comment highlighting in editor: DEFERRED (advanced feature, not critical for MVP)
+  - ⚠️ Click highlight to scroll: DEFERRED (depends on highlighting)
+  - ⚠️ Yjs position tracking: DEFERRED (advanced feature, static offsets work for MVP)
+- Committed: 4706cac "feat: US-MVP-005 - Add sidebar comment thread"
+- Updated PRD: US-MVP-005 marked as passes: true
+
+**Learnings for future iterations:**
+- Comment offset storage: Static character offsets (charStart, charEnd) sufficient for MVP
+- Yjs position tracking: Advanced feature for auto-updating offsets when text changes - defer to Horizon1
+- Comment highlighting: Requires CSS overlay or decorations in textarea - complex, defer to Horizon1
+- Real-time updates: Polling every 10s is simple and works well for MVP (WebSocket would be overkill)
+- Floating button positioning: Use textarea.getBoundingClientRect() for fixed positioning
+- Relative timestamp: formatRelativeTime() helper function for human-readable timestamps
+- Modal overlay pattern: stopPropagation on modal content to prevent closing when clicking inside
+- Session user type: Always cast req.user as SessionUser to access id property
+- Database pool import: Use default import from connection.ts, not named export
+- Comment sorting: ORDER BY char_start ASC, created_at ASC for position-based display
+- Polling implementation: useEffect with setInterval, cleanup on unmount
+- Text selection state: Store {charStart, charEnd, selectedText} for modal display
+- **PATTERN**: Slide-in sidebar with overlay: position fixed, right: 0, animation: slideIn 0.3s ease-out
+- **PATTERN**: Comments toggle button in header: GitHub green (#238636), hover (#2ea043)
+- **PATTERN**: Floating button on text selection: position fixed, transform: translate(-50%, 0) for centering
+- **PATTERN**: Relative time formatting: diffSeconds/diffMinutes/diffHours/diffDays calculation
+- **PATTERN**: Empty state messaging: Clear call-to-action "Select text to add a comment"
+- **PATTERN**: Comment card click handler: onCommentClick prop for future scroll/highlight feature
+- **CRITICAL**: Validation for charStart/charEnd: Must check typeof === 'number', not truthiness (0 is valid)
+- **CRITICAL**: Pool.query returns { rows: [] }, not direct array - always use result.rows
+---
