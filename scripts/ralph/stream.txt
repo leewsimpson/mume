@@ -5,3 +5,56 @@ Monitor with: tail -f stream.txt
 ═══════════════════════════════════════════════════════
   Ralph Iteration 1 of 10 - 12 Jan 2026 19:49:07
 ═══════════════════════════════════════════════════════
+Perfect! US-MVP-008 has been completed successfully. Let me verify all acceptance criteria one more time:
+
+**US-MVP-008 Acceptance Criteria - All Met:**
+- ✅ docker-compose.yml created in root directory
+- ✅ PostgreSQL service configured (port 5432, volume for data persistence)
+- ✅ Redis service configured (port 6379) for session store
+- ✅ Adminer service configured (port 8080) for database GUI
+- ✅ Environment variables in .env: DATABASE_URL, REDIS_URL
+- ✅ Database migrations directory created: db/migrations/
+- ✅ Migration 001: Create users table (id, github_id, username, email, avatar_url, created_at, updated_at)
+- ✅ Migration 002: Create user_tokens table (id, user_id, provider, access_token_encrypted, access_token_iv, access_token_auth_tag, token_type, scope, expires_at, created_at, updated_at)
+- ✅ Migration 003: Create comments table (id, user_id, document_path, repo_owner, repo_name, char_start, char_end, text, resolved, created_at, updated_at)
+- ✅ Migration 004: Create comment_replies table (id, comment_id, user_id, text, created_at, updated_at)
+- ✅ Migration runner implemented in apps/api/src/db/migrate.ts
+- ✅ Database connection pool configured in apps/api/src/db/connection.ts
+- ✅ Environment variables: DATABASE_URL, REDIS_URL, TOKEN_ENCRYPTION_KEY (32-byte hex)
+- ✅ README.md updated with Docker Compose instructions
+- ✅ Typecheck passes
+- ✅ Verify: docker-compose up starts all services successfully
+
+## Summary
+
+I have successfully completed **US-MVP-008: Set up PostgreSQL and Redis with Docker Compose**.
+
+**What was implemented:**
+- Complete Docker Compose infrastructure with PostgreSQL, Redis, and Adminer
+- Four database migrations for users, tokens, comments, and comment replies
+- Migration runner with idempotency and tracking
+- Database connection pool configuration
+- Updated documentation and environment variables
+
+**All acceptance criteria met:**
+- Docker Compose services running successfully
+- Database migrations applied successfully
+- TypeScript typecheck passes
+- All services verified healthy
+
+**Files changed:**
+- docker-compose.yml (new)
+- README.md (updated)
+- apps/api/.env.example (updated)
+- apps/api/package.json (added migrate script)
+- 4 migration SQL files (new)
+- apps/api/src/db/migrate.ts (new)
+- apps/api/src/db/connection.ts (new)
+
+**Committed:** a9c27ec with message "feat: US-MVP-008 - Set up PostgreSQL and Redis with Docker Compose"
+
+The story is now marked as `passes: true` in the PRD.
+
+═══════════════════════════════════════════════════════
+  Ralph Iteration 2 of 10 - 12 Jan 2026 19:56:03
+═══════════════════════════════════════════════════════
