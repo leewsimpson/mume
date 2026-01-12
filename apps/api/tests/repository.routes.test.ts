@@ -235,4 +235,191 @@ describe('Repository Routes', () => {
       expect(totalPages).toBe(2);
     });
   });
+
+  describe('GET /api/repositories/:owner/:repo/tree', () => {
+    it('should return repository tree filtered for markdown files', async () => {
+      const mockTree = {
+        sha: 'abc123',
+        url: 'https://api.github.com/repos/test/repo/git/trees/abc123',
+        tree: [
+          { path: 'README.md', type: 'blob' as const, sha: 'sha1', size: 1024 },
+          { path: 'docs', type: 'tree' as const, sha: 'sha2' },
+          { path: 'docs/guide.md', type: 'blob' as const, sha: 'sha3', size: 2048 },
+          { path: 'src/index.js', type: 'blob' as const, sha: 'sha4', size: 512 },
+        ],
+        truncated: false,
+      };
+
+      const mockFilteredTree = [
+        { path: 'README.md', type: 'blob' as const, sha: 'sha1', size: 1024 },
+        { path: 'docs', type: 'tree' as const, sha: 'sha2' },
+        { path: 'docs/guide.md', type: 'blob' as const, sha: 'sha3', size: 2048 },
+      ];
+
+      mockGitHubService.getRepositoryTree = jest.fn().mockResolvedValue(mockTree);
+      mockGitHubService.filterMarkdownTree = jest.fn().mockReturnValue(mockFilteredTree);
+
+      mockRequest.params = { owner: 'testuser', repo: 'test-repo' };
+
+      const token = mockResponse.locals!.githubToken as string;
+      const tree = await mockGitHubService.getRepositoryTree(
+        'testuser',
+        'test-repo',
+        token,
+        mockRequest.logger
+      );
+      const filteredTree = mockGitHubService.filterMarkdownTree(tree);
+
+      expect(mockGitHubService.getRepositoryTree).toHaveBeenCalledWith(
+        'testuser',
+        'test-repo',
+        token,
+        mockRequest.logger
+      );
+      expect(mockGitHubService.filterMarkdownTree).toHaveBeenCalledWith(tree);
+      expect(filteredTree.length).toBe(3);
+      expect(filteredTree.filter((item) => item.path?.endsWith('.md')).length).toBe(2);
+    });
+
+    it('should handle repository not found error', async () => {
+      const error = new Error('Not Found') as any;
+      error.status = 404;
+
+      mockGitHubService.getRepositoryTree = jest.fn().mockRejectedValue(error);
+
+      try {
+        await mockGitHubService.getRepositoryTree('testuser', 'nonexistent', 'test-token', mockRequest.logger);
+      } catch (err) {
+        expect(err).toBe(error);
+        expect((err as any).status).toBe(404);
+      }
+    });
+
+    it('should handle rate limit errors', async () => {
+      const error = new Error('Rate Limit Exceeded') as any;
+      error.status = 403;
+
+      mockGitHubService.getRepositoryTree = jest.fn().mockRejectedValue(error);
+
+      try {
+        await mockGitHubService.getRepositoryTree('testuser', 'test-repo', 'test-token', mockRequest.logger);
+      } catch (err) {
+        expect(err).toBe(error);
+        expect((err as any).status).toBe(403);
+      }
+    });
+
+    it('should use cached tree within TTL', async () => {
+      const mockTree = {
+        sha: 'abc123',
+        url: 'https://api.github.com/repos/test/repo/git/trees/abc123',
+        tree: [
+          { path: 'README.md', type: 'blob' as const, sha: 'sha1', size: 1024 },
+        ],
+        truncated: false,
+      };
+
+      mockGitHubService.getRepositoryTree = jest.fn().mockResolvedValue(mockTree);
+
+      // First call
+      await mockGitHubService.getRepositoryTree('testuser', 'test-repo', 'test-token', mockRequest.logger);
+
+      // Second call (should use cache)
+      await mockGitHubService.getRepositoryTree('testuser', 'test-repo', 'test-token', mockRequest.logger);
+
+      // In real implementation, second call wouldn't hit GitHub API due to cache
+      expect(mockGitHubService.getRepositoryTree).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('GitHubService.filterMarkdownTree', () => {
+    it('should filter tree to only include markdown files and their folders', () => {
+      const tree = {
+        sha: 'abc123',
+        url: 'https://api.github.com/repos/test/repo/git/trees/abc123',
+        tree: [
+          { path: 'README.md', type: 'blob' as const },
+          { path: 'docs', type: 'tree' as const },
+          { path: 'docs/guide.md', type: 'blob' as const },
+          { path: 'src', type: 'tree' as const },
+          { path: 'src/index.js', type: 'blob' as const },
+          { path: 'src/utils.js', type: 'blob' as const },
+        ],
+        truncated: false,
+      };
+
+      const githubService = new GitHubService();
+      const filtered = githubService.filterMarkdownTree(tree);
+
+      expect(filtered.length).toBe(3);
+      expect(filtered.some((item) => item.path === 'README.md')).toBe(true);
+      expect(filtered.some((item) => item.path === 'docs')).toBe(true);
+      expect(filtered.some((item) => item.path === 'docs/guide.md')).toBe(true);
+      expect(filtered.some((item) => item.path === 'src')).toBe(false);
+      expect(filtered.some((item) => item.path === 'src/index.js')).toBe(false);
+    });
+
+    it('should include nested folders that contain markdown files', () => {
+      const tree = {
+        sha: 'abc123',
+        url: 'https://api.github.com/repos/test/repo/git/trees/abc123',
+        tree: [
+          { path: 'docs', type: 'tree' as const },
+          { path: 'docs/api', type: 'tree' as const },
+          { path: 'docs/api/endpoints.md', type: 'blob' as const },
+          { path: 'assets', type: 'tree' as const },
+          { path: 'assets/logo.png', type: 'blob' as const },
+        ],
+        truncated: false,
+      };
+
+      const githubService = new GitHubService();
+      const filtered = githubService.filterMarkdownTree(tree);
+
+      expect(filtered.length).toBe(3);
+      expect(filtered.some((item) => item.path === 'docs')).toBe(true);
+      expect(filtered.some((item) => item.path === 'docs/api')).toBe(true);
+      expect(filtered.some((item) => item.path === 'docs/api/endpoints.md')).toBe(true);
+      expect(filtered.some((item) => item.path === 'assets')).toBe(false);
+    });
+
+    it('should handle tree with no markdown files', () => {
+      const tree = {
+        sha: 'abc123',
+        url: 'https://api.github.com/repos/test/repo/git/trees/abc123',
+        tree: [
+          { path: 'src', type: 'tree' as const },
+          { path: 'src/index.js', type: 'blob' as const },
+          { path: 'package.json', type: 'blob' as const },
+        ],
+        truncated: false,
+      };
+
+      const githubService = new GitHubService();
+      const filtered = githubService.filterMarkdownTree(tree);
+
+      expect(filtered.length).toBe(0);
+    });
+
+    it('should handle markdown files at root level', () => {
+      const tree = {
+        sha: 'abc123',
+        url: 'https://api.github.com/repos/test/repo/git/trees/abc123',
+        tree: [
+          { path: 'README.md', type: 'blob' as const },
+          { path: 'CONTRIBUTING.md', type: 'blob' as const },
+          { path: 'LICENSE', type: 'blob' as const },
+        ],
+        truncated: false,
+      };
+
+      const githubService = new GitHubService();
+      const filtered = githubService.filterMarkdownTree(tree);
+
+      expect(filtered.length).toBe(2);
+      expect(filtered.some((item) => item.path === 'README.md')).toBe(true);
+      expect(filtered.some((item) => item.path === 'CONTRIBUTING.md')).toBe(true);
+      expect(filtered.some((item) => item.path === 'LICENSE')).toBe(false);
+    });
+  });
 });

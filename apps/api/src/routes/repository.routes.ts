@@ -154,4 +154,69 @@ router.get('/selected', (req, res) => {
   }
 });
 
+/**
+ * GET /api/repositories/:owner/:repo/tree
+ * Get repository file tree filtered to show only .md files and their folders
+ */
+router.get('/:owner/:repo/tree', async (req, res) => {
+  try {
+    const { owner, repo } = req.params;
+    const user = req.user as SessionUser;
+    const token = res.locals.githubToken as string;
+
+    req.logger?.info('Fetching repository tree', {
+      userId: user.id,
+      owner,
+      repo,
+      operation: 'getRepositoryTree',
+    });
+
+    const tree = await githubService.getRepositoryTree(owner, repo, token, req.logger);
+    const filteredTree = githubService.filterMarkdownTree(tree);
+
+    req.logger?.info('Successfully fetched and filtered repository tree', {
+      userId: user.id,
+      owner,
+      repo,
+      totalItems: tree.tree.length,
+      filteredItems: filteredTree.length,
+      operation: 'getRepositoryTree',
+    });
+
+    res.json({
+      sha: tree.sha,
+      url: tree.url,
+      tree: filteredTree,
+      truncated: tree.truncated,
+    });
+  } catch (error) {
+    req.logger?.error(
+      'Failed to fetch repository tree',
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        userId: (req.user as SessionUser)?.id,
+        owner: req.params.owner,
+        repo: req.params.repo,
+        operation: 'getRepositoryTree',
+      }
+    );
+
+    // Handle specific GitHub API errors
+    if (error instanceof Error && 'status' in error) {
+      const status = (error as { status: number }).status;
+      if (status === 404) {
+        return res.status(404).json({ error: 'Repository not found' });
+      }
+      if (status === 401) {
+        return res.status(401).json({ error: 'GitHub token is invalid or expired' });
+      }
+      if (status === 403) {
+        return res.status(403).json({ error: 'Rate limit exceeded or insufficient permissions' });
+      }
+    }
+
+    res.status(500).json({ error: 'Failed to fetch repository tree' });
+  }
+});
+
 export default router;
