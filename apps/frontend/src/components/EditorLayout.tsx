@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useYjsProvider } from '../hooks/useYjsProvider';
 import { MarkdownEditor } from './MarkdownEditor';
@@ -6,6 +6,7 @@ import { MarkdownPreview } from './MarkdownPreview';
 import { UserPresence } from './UserPresence';
 import { ConnectionStatus } from './ConnectionStatus';
 import { SaveStatus } from './SaveStatus';
+import { SaveNowButton } from './SaveNowButton';
 import { CommentSidebar, type Comment } from './CommentSidebar';
 import { AddCommentModal } from './AddCommentModal';
 
@@ -44,6 +45,9 @@ export function EditorLayout({
     charEnd: number;
     selectedText: string;
   } | null>(null);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Initialize Yjs provider with document ID from route and user name
   const { ydoc: _ydoc, ytext, provider: _provider, awareness, status, error, reconnectAttempts } = useYjsProvider(documentId, userName, 'ws://localhost:3000', avatarUrl, githubId);
@@ -58,9 +62,10 @@ export function EditorLayout({
       setMarkdown(ytextContent);
     }
 
-    // Listen for Y.Text changes to update preview
+    // Listen for Y.Text changes to update preview and track unsaved changes
     const observer = () => {
       setMarkdown(ytext.toString());
+      setHasUnsavedChanges(true);
     };
 
     ytext.observe(observer);
@@ -69,6 +74,66 @@ export function EditorLayout({
       ytext.unobserve(observer);
     };
   }, [ytext]);
+
+  // Manual save handler
+  const handleSaveNow = useCallback(async () => {
+    if (!owner || !repo || !documentId || isSaving || !hasUnsavedChanges) {
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveStatus('saving');
+
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/repositories/${owner}/${repo}/documents/${encodeURIComponent(documentId)}/save`,
+        {
+          method: 'POST',
+          credentials: 'include',
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to save');
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        setSaveStatus('saved');
+        setHasUnsavedChanges(false);
+
+        // Reset to idle after 2 seconds
+        setTimeout(() => {
+          setSaveStatus('idle');
+        }, 2000);
+      } else {
+        setSaveStatus('error');
+      }
+    } catch (error) {
+      console.error('Save error:', error);
+      setSaveStatus('error');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [owner, repo, documentId, isSaving, hasUnsavedChanges]);
+
+  // Keyboard shortcut: Ctrl+S / Cmd+S
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check for Ctrl+S (Windows/Linux) or Cmd+S (Mac)
+      if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+        event.preventDefault(); // Prevent browser's default save dialog
+        handleSaveNow();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleSaveNow]);
 
   // Handle "Add Comment" click from MarkdownEditor
   const handleAddCommentRequest = (charStart: number, charEnd: number, selectedText: string) => {
@@ -120,7 +185,15 @@ export function EditorLayout({
     <div className="editor-layout">
       <div className="editor-header">
         <ConnectionStatus status={status} />
-        <SaveStatus status="saved" message="Auto-save enabled (30s)" />
+        <SaveStatus
+          status={saveStatus}
+          message={saveStatus === 'idle' ? 'Auto-save enabled (30s)' : undefined}
+        />
+        <SaveNowButton
+          onSave={handleSaveNow}
+          isSaving={isSaving}
+          disabled={!hasUnsavedChanges}
+        />
         <button
           className="comments-toggle-button"
           onClick={toggleSidebar}

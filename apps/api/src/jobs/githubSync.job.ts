@@ -64,7 +64,7 @@ function hasChanges(ydoc: Y.Doc, lastSaved: Date): boolean {
  * @param logger - Optional logger
  * @returns True if save succeeded, false otherwise
  */
-async function saveDocumentWithRetry(
+export async function saveDocumentWithRetry(
   documentId: string,
   logger?: Logger
 ): Promise<boolean> {

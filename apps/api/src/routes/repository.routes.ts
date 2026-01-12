@@ -4,6 +4,7 @@ import { documentStateService } from '../services/documentState.service.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { validateGitHubToken } from '../middleware/validateGitHubToken.js';
 import type { SessionUser } from '../config/passport.js';
+import pool from '../db/connection.js';
 
 const router = Router();
 const githubService = new GitHubService();
@@ -281,6 +282,199 @@ router.post('/:owner/:repo/documents/register', async (req, res) => {
     );
 
     res.status(500).json({ error: 'Failed to register document' });
+  }
+});
+
+/**
+ * POST /api/repositories/:owner/:repo/documents/:documentId/save
+ * Manually trigger an immediate save to GitHub
+ */
+router.post('/:owner/:repo/documents/:documentId/save', async (req, res) => {
+  try {
+    const { owner, repo, documentId } = req.params;
+    const user = req.user as SessionUser;
+
+    req.logger?.info('Manual save triggered', {
+      userId: user.id,
+      owner,
+      repo,
+      documentId,
+      operation: 'manualSave',
+    });
+
+    // Import the save function dynamically to avoid circular dependencies
+    const { saveDocumentWithRetry } = await import('../jobs/githubSync.job.js');
+
+    // Trigger immediate save
+    const success = await saveDocumentWithRetry(documentId, req.logger);
+
+    if (success) {
+      req.logger?.info('Manual save succeeded', {
+        userId: user.id,
+        documentId,
+        operation: 'manualSave',
+      });
+
+      // Get updated metadata to return to client
+      const metadata = documentStateService.getDocument(documentId);
+
+      res.json({
+        success: true,
+        message: 'Changes saved to GitHub',
+        sha: metadata?.sha,
+        lastSaved: metadata?.lastSaved,
+      });
+    } else {
+      req.logger?.warn('Manual save failed', {
+        userId: user.id,
+        documentId,
+        operation: 'manualSave',
+      });
+
+      res.status(500).json({
+        success: false,
+        error: 'Failed to save changes to GitHub',
+      });
+    }
+  } catch (error) {
+    req.logger?.error(
+      'Manual save error',
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        userId: (req.user as SessionUser)?.id,
+        owner: req.params.owner,
+        repo: req.params.repo,
+        documentId: req.params.documentId,
+        operation: 'manualSave',
+      }
+    );
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to save changes to GitHub',
+    });
+  }
+});
+
+/**
+ * GET /api/repositories/:owner/:repo/files/:filePath/comments
+ * Get all comments for a specific document
+ * Note: Uses wildcard to match file paths - must be defined BEFORE the wildcard file route
+ */
+router.get('/:owner/:repo/files/*/comments', async (req, res) => {
+  try {
+    const { owner, repo } = req.params;
+    const filePath = (req.params as Record<string, string>)['0'];
+
+    if (!filePath) {
+      return res.status(400).json({ error: 'File path is required' });
+    }
+
+    // Fetch comments with user information
+    const result = await pool.query(
+      `SELECT c.id, c.user_id, c.document_path, c.repo_owner, c.repo_name,
+              c.char_start, c.char_end, c.text, c.resolved, c.created_at, c.updated_at,
+              u.username, u.avatar_url
+       FROM comments c
+       JOIN users u ON c.user_id = u.id
+       WHERE c.repo_owner = $1 AND c.repo_name = $2 AND c.document_path = $3
+       ORDER BY c.char_start ASC, c.created_at ASC`,
+      [owner, repo, filePath]
+    );
+
+    // Fetch all replies for these comments
+    const commentIds = result.rows.map((row: { id: number }) => row.id);
+    const repliesMap = new Map<number, Array<{
+      id: number;
+      commentId: number;
+      userId: number;
+      text: string;
+      createdAt: Date;
+      updatedAt: Date;
+      user: { id: number; username: string; avatarUrl: string };
+    }>>();
+
+    if (commentIds.length > 0) {
+      const repliesResult = await pool.query(
+        `SELECT r.id, r.comment_id, r.user_id, r.text, r.created_at, r.updated_at,
+                u.username, u.avatar_url
+         FROM comment_replies r
+         JOIN users u ON r.user_id = u.id
+         WHERE r.comment_id = ANY($1)
+         ORDER BY r.created_at ASC`,
+        [commentIds]
+      );
+
+      for (const reply of repliesResult.rows) {
+        if (!repliesMap.has(reply.comment_id)) {
+          repliesMap.set(reply.comment_id, []);
+        }
+        repliesMap.get(reply.comment_id)!.push({
+          id: reply.id,
+          commentId: reply.comment_id,
+          userId: reply.user_id,
+          text: reply.text,
+          createdAt: reply.created_at,
+          updatedAt: reply.updated_at,
+          user: {
+            id: reply.user_id,
+            username: reply.username,
+            avatarUrl: reply.avatar_url
+          }
+        });
+      }
+    }
+
+    const comments = result.rows.map((row: {
+      id: number;
+      user_id: number;
+      document_path: string;
+      repo_owner: string;
+      repo_name: string;
+      char_start: number;
+      char_end: number;
+      text: string;
+      resolved: boolean;
+      created_at: Date;
+      updated_at: Date;
+      username: string;
+      avatar_url: string;
+    }) => ({
+      id: row.id,
+      userId: row.user_id,
+      documentPath: row.document_path,
+      repoOwner: row.repo_owner,
+      repoName: row.repo_name,
+      charStart: row.char_start,
+      charEnd: row.char_end,
+      text: row.text,
+      resolved: row.resolved,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      user: {
+        id: row.user_id,
+        username: row.username,
+        avatarUrl: row.avatar_url
+      },
+      replies: repliesMap.get(row.id) || []
+    }));
+
+    req.logger?.info('Comments fetched successfully', {
+      owner,
+      repo,
+      filePath,
+      commentCount: comments.length,
+      operation: 'fetch_comments'
+    });
+
+    res.json(comments);
+  } catch (error) {
+    req.logger?.error('Failed to fetch comments', error as Error, {
+      owner: req.params.owner,
+      repo: req.params.repo,
+      operation: 'fetch_comments'
+    });
+    res.status(500).json({ error: 'Failed to fetch comments' });
   }
 });
 

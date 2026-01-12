@@ -73,8 +73,6 @@ async function bootstrap() {
   app.use('/auth', authRoutes);
   app.use('/api/repositories', repositoryRoutes);
   app.use('/api/comments', commentRoutes);
-  // Mount comment routes under /api as well for GET /api/repositories/:owner/:repo/files/*/comments
-  app.use('/api', commentRoutes);
 
   // Health check endpoint
   app.get('/health', (_req, res) => {

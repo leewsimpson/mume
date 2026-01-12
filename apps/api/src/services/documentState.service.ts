@@ -18,6 +18,8 @@ export interface DocumentMetadata {
   lastSaved: Date;
   /** Set of user names who have edited this document */
   editors: Set<string>;
+  /** Whether the document has unsaved changes */
+  hasUnsavedChanges: boolean;
 }
 
 /**
@@ -62,6 +64,7 @@ export class DocumentStateService {
       isSaving: false,
       lastSaved: new Date(),
       editors: new Set(),
+      hasUnsavedChanges: false,
     };
 
     this.documents.set(documentId, metadata);
@@ -124,6 +127,7 @@ export class DocumentStateService {
       metadata.isSaving = false;
       metadata.sha = newSha;
       metadata.lastSaved = new Date();
+      metadata.hasUnsavedChanges = false;
     }
   }
 
@@ -181,6 +185,17 @@ export class DocumentStateService {
    */
   getDocumentCount(): number {
     return this.documents.size;
+  }
+
+  /**
+   * Mark a document as having unsaved changes
+   * @param documentId - Document identifier
+   */
+  markChanged(documentId: string): void {
+    const metadata = this.documents.get(documentId);
+    if (metadata) {
+      metadata.hasUnsavedChanges = true;
+    }
   }
 }
 

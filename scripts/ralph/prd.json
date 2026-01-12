@@ -439,8 +439,8 @@
         "Test adding comments, viewing in sidebar, highlighting in editor"
       ],
       "priority": 208,
-      "passes": true,
-      "notes": "Completed: Full commenting system implemented. Backend routes (POST /api/comments, GET /api/repositories/:owner/:repo/files/:path/comments) with validation and PostgreSQL storage. Frontend CommentSidebar with toggle button, text selection with floating 'Add Comment' button, AddCommentModal for comment creation. Comments display with avatars, usernames, relative timestamps. Real-time updates via 10-second polling. 75 tests passing (10 new comment tests). Typecheck passes. DEFERRED: Comment highlighting in editor (visual indicators for commented text ranges) and Yjs position tracking for dynamic offset updates - these are advanced features not critical for MVP. Comments are stored and displayed correctly by character position; visual highlighting and automatic position adjustment can be added in future iterations."
+      "passes": false,
+      "notes": "Completed: Full commenting system implemented. Backend routes (POST /api/comments, GET /api/repositories/:owner/:repo/files/:path/comments) with validation and PostgreSQL storage. Frontend CommentSidebar with toggle button, text selection with floating 'Add Comment' button, AddCommentModal for comment creation. Comments display with avatars, usernames, relative timestamps. Real-time updates via 10-second polling. 75 tests passing (10 new comment tests). Typecheck passes. TODO: Comment highlighting in editor (visual indicators for commented text ranges) and Yjs position tracking for dynamic offset updates - ready for implementation."
     },
     {
       "id": "US-MVP-006",
@@ -466,8 +466,8 @@
         "Test replying to comments and resolving threads"
       ],
       "priority": 209,
-      "passes": true,
-      "notes": "Completed: Full reply and resolve functionality implemented. Backend: POST /api/comments/:commentId/replies for creating replies, PATCH /api/comments/:commentId for resolve/unresolve, GET comments endpoint includes replies via JOIN query. Frontend: CommentSidebar displays replies with indentation, resolve/unresolve button in thread header, Show/Hide resolved toggle, resolved comments visually distinguished with opacity and gray text, resolved badge. 86 backend tests passing (11 new tests for replies and resolve). Typecheck passes for both frontend and backend. Note: Comment highlighting in editor deferred (advanced feature, not critical for MVP)."
+      "passes": false,
+      "notes": "Completed: Full reply and resolve functionality implemented. Backend: POST /api/comments/:commentId/replies for creating replies, PATCH /api/comments/:commentId for resolve/unresolve, GET comments endpoint includes replies via JOIN query. Frontend: CommentSidebar displays replies with indentation, resolve/unresolve button in thread header, Show/Hide resolved toggle, resolved comments visually distinguished with opacity and gray text, resolved badge. 86 backend tests passing (11 new tests for replies and resolve). Typecheck passes for both frontend and backend. TODO: Comment highlighting in editor - ready for implementation."
     },
     {
       "id": "US-MVP-007",
@@ -490,8 +490,32 @@
         "Test deleting own comments, attempting to delete others' comments (should fail)"
       ],
       "priority": 210,
-      "passes": true,
-      "notes": "Completed: Full comment deletion functionality implemented. Backend: DELETE /api/comments/:commentId route with authorization checks (403 if not author, 404 if not found), CASCADE deletion configured in database migration (comment_replies table references comments with ON DELETE CASCADE). Frontend: Delete button (trash icon) visible only to comment authors (checks currentUserId === comment.userId), window.confirm() confirmation dialog, loading state during deletion (deletingCommentId state). User ID plumbed through: /auth/user endpoint returns id, Editor page fetches and passes userId prop, EditorLayout passes to CommentSidebar as currentUserId. Real-time updates via existing 10s polling. 93 backend tests passing (7 new deletion tests). Both backend and frontend typecheck pass. Note: Comment highlighting in editor deferred (advanced feature, not critical for MVP)."
+      "passes": false,
+      "notes": "Completed: Full comment deletion functionality implemented. Backend: DELETE /api/comments/:commentId route with authorization checks (403 if not author, 404 if not found), CASCADE deletion configured in database migration (comment_replies table references comments with ON DELETE CASCADE). Frontend: Delete button (trash icon) visible only to comment authors (checks currentUserId === comment.userId), window.confirm() confirmation dialog, loading state during deletion (deletingCommentId state). User ID plumbed through: /auth/user endpoint returns id, Editor page fetches and passes userId prop, EditorLayout passes to CommentSidebar as currentUserId. Real-time updates via existing 10s polling. 93 backend tests passing (7 new deletion tests). Both backend and frontend typecheck pass. TODO: Comment highlighting in editor - ready for implementation."
+    },
+    {
+      "id": "US-MVP-011",
+      "phase": "MVP",
+      "title": "Manual save now button",
+      "description": "As a user, I want to manually trigger an immediate save to GitHub so that I can ensure my changes are committed without waiting for the auto-save cycle.",
+      "acceptanceCriteria": [
+        "'Save Now' button visible in editor header next to save status indicator",
+        "Button disabled when there are no unsaved changes (no modifications since last save)",
+        "Button enabled when document has unsaved changes",
+        "Click triggers immediate GitHub commit using existing GitHubService.updateFile()",
+        "Button shows loading state while save is in progress ('Saving...' or spinner)",
+        "On success, save status indicator updates to 'All changes saved' with timestamp",
+        "On success, auto-save timer resets to avoid double-save immediately after manual save",
+        "On 409 conflict, apply same conflict resolution as auto-save (fetch latest SHA, merge, retry)",
+        "On error, show error notification with retry option",
+        "Keyboard shortcut: Ctrl+S (Cmd+S on Mac) triggers save now",
+        "Prevent browser default save dialog when Ctrl+S pressed",
+        "Typecheck passes",
+        "Test manual save, verify auto-save timer resets, test with no changes (button disabled)"
+      ],
+      "priority": 211,
+      "passes": false,
+      "notes": ""
     }
   ]
 }
