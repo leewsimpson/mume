@@ -2,7 +2,7 @@
 
 **Last Updated:** 2026-01-11
 **Status:** PoC Phase - Decisions Finalized
-**Related Documents:** Requirements documentation (to be created in `../requirements/`)
+**Related Documents:** [requirements.md](../requirements/requirements.md), [prd.json](../../scripts/ralph/prd.json)
 
 ---
 
