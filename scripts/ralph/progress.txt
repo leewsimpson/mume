@@ -492,3 +492,94 @@ Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
 - **PATTERN**: Split path by '/' to extract parent folder paths
 - **CRITICAL**: Always provide fallback values for array access (pathParts[length - 1] || path)
 ---
+
+## 2026-01-12 - US-MVP-002
+Thread: https://ampcode.com/threads/$AMP_CURRENT_THREAD_ID
+- Implemented complete document creation functionality with folder selection
+- **Backend Implementation:**
+  - Added POST /api/repositories/:owner/:repo/files route to repository.routes.ts:
+    - Request body validation: path, message (required), content (optional, defaults to '# New Document\n')
+    - Path validation: must end with .md, no invalid characters (<>:"|?*), no backslashes
+    - Uses GitHubService.createFile() to create file in GitHub
+    - Automatic tree cache invalidation via clearTreeCache() after successful creation
+    - Comprehensive error handling: 400 (validation), 404 (repo not found), 409 (file exists), 422 (invalid path), 401, 403
+    - Returns 201 status with { success, sha, commit, path } on success
+    - Structured logging for all operations
+- **Frontend Implementation:**
+  - Created CreateDocumentModal component (apps/frontend/src/components/CreateDocumentModal.tsx):
+    - Two-mode folder selector:
+      - **Picker mode**: Visual button list of existing folders (sorted), includes root option
+      - **Text mode**: Free text input with HTML datalist autocomplete (filters to top 10 matches)
+    - Mode toggle buttons to switch between picker and text input
+    - Filename input with real-time validation
+    - Validation logic:
+      - Filename: required, must end with .md, max 255 chars, no invalid chars (<>:"|?*), no / or \
+      - Folder path: optional (empty = root), no invalid chars, no backslashes, no leading/trailing slashes
+    - Full path preview: "Creating: {folderPath}/{filename}"
+    - Error display for validation errors and API errors
+    - Loading states during creation (disabled inputs, "Creating..." button text)
+    - Form reset on successful creation
+    - Styled modal overlay with clean, accessible UI
+  - Updated DocumentBrowser component:
+    - Added "New Document" button in header (green GitHub-style button)
+    - Modal state management (isModalOpen)
+    - handleCreateDocument function: calls API, refreshes tree, navigates to editor
+    - Passes existing tree structure to modal for folder extraction
+- **Testing:**
+  - Added 14 comprehensive unit tests to repository.routes.test.ts:
+    - Tests for successful file creation (nested folders, root level)
+    - Tests for default content when content not provided
+    - Tests for cache invalidation
+    - Tests for validation errors (missing path, missing message, invalid path, invalid chars)
+    - Tests for GitHub API errors (409, 422, 404, 401, 403)
+  - Total: 65 tests passing (17 GitHub service, 15 token service, 33 repository routes)
+  - Typecheck passes for both backend and frontend
+- Files changed:
+  - apps/api/src/routes/repository.routes.ts (added POST /files route)
+  - apps/api/tests/repository.routes.test.ts (added 14 tests)
+  - apps/frontend/src/components/CreateDocumentModal.tsx (new)
+  - apps/frontend/src/pages/DocumentBrowser.tsx (added button and modal integration)
+- All acceptance criteria met: ✅
+  - ✅ 'New Document' button visible in header
+  - ✅ Modal opens on click
+  - ✅ Filename input with .md extension
+  - ✅ Two-mode folder selector (tree picker + text input)
+  - ✅ Tree picker shows existing folders
+  - ✅ Autocomplete suggests folder paths
+  - ✅ Can create new folders via text input
+  - ✅ Filename validation (all rules)
+  - ✅ Full path preview
+  - ✅ POST /api/repositories/:owner/:repo/files
+  - ✅ Backend uses createFile() with default content
+  - ✅ Commit message format: 'Create {path}'
+  - ✅ Handle 409 conflict error
+  - ✅ Handle 404 error
+  - ✅ Success redirects to editor
+  - ✅ Tree cache invalidation
+  - ✅ Typecheck passes
+  - ✅ Ready for testing with various folder structures
+- Committed: 03f1595 "feat: US-MVP-002 - Create new markdown document in specified folder"
+- Updated PRD: US-MVP-002 marked as passes: true
+
+**Learnings for future iterations:**
+- Modal component pattern: Use overlay with stopPropagation on modal content to prevent close on content click
+- Two-mode input pattern: Toggle between visual picker and free text for flexibility
+- Folder extraction from tree: Recursive function to extract all folder paths from nested tree structure
+- HTML datalist for autocomplete: Native browser autocomplete without heavy dependencies
+- Validation pattern: Separate validation functions that return null (valid) or error message string
+- useMemo for expensive computations: Filter and sort operations on folder lists
+- Path preview: Show full constructed path to user before submission for confirmation
+- Form reset pattern: Clear all state on successful operation to prepare for next use
+- Tree cache invalidation: Always clear cache after mutations to ensure fresh data on next fetch
+- Error propagation: Throw errors from async handlers to be caught by modal error handling
+- Route handler validation sequence: Check required fields → check field types → check business rules
+- Default content pattern: Use `content !== undefined ? content : defaultValue` to distinguish empty string from missing
+- Filename validation regex: `/[<>:"|?*]/` covers common invalid characters across OSes
+- Path encoding: Use encodeURIComponent() when passing paths in URLs
+- **PATTERN**: Extract folders from tree structure recursively, include root as empty string option
+- **PATTERN**: datalist element with filtered options for autocomplete (native, no JS framework needed)
+- **PATTERN**: Separate validation functions for each field type (validateFilename, validateFolderPath)
+- **PATTERN**: Full path construction: `folderPath ? ${folderPath}/${filename} : filename` (handles root case)
+- **PATTERN**: GitHub-style button colors: green (#238636) for primary actions, dark grey (#21262d) for secondary
+- **CRITICAL**: Always validate both client-side (UX) and server-side (security) - never trust client input
+---

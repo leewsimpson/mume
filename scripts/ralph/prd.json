@@ -330,8 +330,8 @@
         "Test creating files in root, existing folders, and new folders"
       ],
       "priority": 204,
-      "passes": false,
-      "notes": ""
+      "passes": true,
+      "notes": "Completed: Full document creation functionality implemented. Backend POST /api/repositories/:owner/:repo/files route with validation, error handling, and cache invalidation. Frontend CreateDocumentModal component with two-mode folder selector (tree picker + text input with autocomplete), filename validation, path preview. 'New Document' button in DocumentBrowser header. Comprehensive validation: .md extension required, invalid characters blocked, max 255 chars. Error handling: 409 (file exists), 404 (repo not found), 422 (invalid path), 401, 403. Success redirects to editor route. 14 new unit tests (65 total passing). Both backend and frontend typecheck pass."
     },
     {
       "id": "US-MVP-003",
