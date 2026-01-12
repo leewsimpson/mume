@@ -35,25 +35,62 @@ This is a Proof of Concept (PoC) project that enables multiple users to simultan
 
 ### Prerequisites
 - Node.js 18+
+- Docker and Docker Compose
 - Git
 
 ### Quick Start
 
-1. **Start the backend API** (runs on port 3000):
+1. **Start infrastructure services** (PostgreSQL, Redis, Adminer):
+   ```bash
+   docker-compose up -d
+   ```
+
+2. **Set up environment variables**:
+   ```bash
+   cd apps/api
+   cp .env.example .env
+   # Edit .env if needed - defaults should work for local development
+   ```
+
+3. **Run database migrations**:
    ```bash
    cd apps/api
    npm install
+   npm run migrate
+   ```
+
+4. **Start the backend API** (runs on port 3000):
+   ```bash
+   cd apps/api
    npm run dev
    ```
 
-2. **Start the frontend** (runs on port 5173):
+5. **Start the frontend** (runs on port 5173):
    ```bash
    cd apps/frontend
    npm install
    npm run dev
    ```
 
-3. Open http://localhost:5173 in multiple browser windows to test collaboration
+6. Open http://localhost:5173 in multiple browser windows to test collaboration
+
+### Infrastructure Services
+
+The project uses Docker Compose to run supporting services:
+
+- **PostgreSQL** (port 5432): Stores users, tokens, and comments
+- **Redis** (port 6379): Session store for authentication
+- **Adminer** (port 8080): Web-based database GUI at http://localhost:8080
+
+To stop services:
+```bash
+docker-compose down
+```
+
+To view logs:
+```bash
+docker-compose logs -f
+```
 
 ### Backend
 The backend runs on port 3000 and provides:
