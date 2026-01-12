@@ -34,10 +34,11 @@ export function Editor() {
         return res.json();
       })
       .then((data) => {
-        setUserName(data.username || data.githubId || 'Anonymous');
-        setAvatarUrl(data.avatarUrl || '');
-        setGithubId(data.githubId || '');
-        setUserId(data.id);
+        const user = data.user;
+        setUserName(user.username || user.githubId || 'Anonymous');
+        setAvatarUrl(user.avatarUrl || '');
+        setGithubId(user.githubId || '');
+        setUserId(user.id);
       })
       .catch((err) => {
         console.error('Failed to fetch user info:', err);

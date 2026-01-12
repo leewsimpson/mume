@@ -37,6 +37,52 @@
 8. **Update Seed Data** - Update seed data when adding new test scenarios to ensure consistent test environments.
 9. **Keep Test Files Organised** - Group related tests together. Maintain parallel structure with source code where appropriate.
 
+## E2E Testing with Playwright
+E2E tests live in `tests/` at the repository root. See `tests/README.md` for full documentation.
+
+### Running E2E Tests
+```bash
+# Ensure Docker services are running
+docker-compose up -d
+
+# Install dependencies
+cd tests && npm install && npx playwright install
+
+# Run all tests
+npm test
+
+# Run with UI for debugging
+npm run test:ui
+
+# Run specific test file
+npx playwright test e2e/specs/auth-flow.unauth.test.ts
+```
+
+### Test Structure
+- `tests/e2e/specs/` - Test specifications organised by user story
+- `tests/e2e/fixtures/` - Auth and database fixtures
+- `tests/e2e/mocks/` - GitHub API and OAuth mocks
+- `tests/e2e/utils/` - Shared test helpers
+
+### When Implementing New Features
+1. **Create E2E test first** - Write failing E2E test for the user story
+2. **Implement feature** - Build the feature to pass the test
+3. **Add to test suite** - Ensure test is included in the appropriate spec file
+4. **Update seed data** - Add any new test data to `tests/seed-data/test-data.sql`
+
+### Mock vs Real Services
+- **GitHub OAuth**: Mocked via `/auth/test-login` endpoint (only in E2E_TEST_MODE)
+- **GitHub API**: Mocked via Playwright route interception
+- **PostgreSQL**: Real database in Docker (test database: `markdown_editor_test`)
+- **Redis**: Real Redis in Docker for session storage
+
+### Maintaining E2E Tests
+- **Always run E2E tests** before merging code changes
+- **Update tests** when modifying user-facing behaviour
+- **Add tests** for new user stories before implementation
+- **Fix flaky tests** immediately - they indicate real problems
+- **Keep test data minimal** - only add what's needed for test scenarios
+
 ## Logging Principles
 1. **Use Structured Logging** - Always use `req.logger` in route handlers instead of `console.log`. This provides correlation IDs and contextual properties.
 2. **Include Context** - Always add relevant properties: `userId`, `operation`, entity IDs, etc. This makes debugging significantly easier.

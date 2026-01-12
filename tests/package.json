@@ -1,0 +1,24 @@
+{
+  "name": "mume-e2e-tests",
+  "version": "1.0.0",
+  "description": "End-to-end tests for Mume collaborative markdown editor",
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "test:report": "playwright show-report",
+    "setup:db": "tsx setup/seed-database.ts",
+    "setup:services": "tsx setup/wait-for-services.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.49.0",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.6",
+    "pg": "^8.16.0",
+    "redis": "^4.7.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}
