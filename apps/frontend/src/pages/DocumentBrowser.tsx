@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import { CreateDocumentModal } from '../components/CreateDocumentModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -34,6 +35,7 @@ export function DocumentBrowser() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchRepositoryTree();
@@ -267,6 +269,33 @@ export function DocumentBrowser() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const handleCreateDocument = async (folderPath: string, filename: string) => {
+    const fullPath = folderPath ? `${folderPath}/${filename}` : filename;
+    const commitMessage = `Create ${fullPath}`;
+
+    const response = await fetch(`${API_URL}/api/repositories/${owner}/${repo}/files`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        path: fullPath,
+        content: '# New Document\n',
+        message: commitMessage,
+      }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Failed to create document');
+    }
+
+    // Refresh tree and navigate to new file
+    await fetchRepositoryTree();
+    navigate(`/repositories/${owner}/${repo}/edit/${encodeURIComponent(fullPath)}`);
+  };
+
   return (
     <div
       style={{
@@ -309,19 +338,36 @@ export function DocumentBrowser() {
           </div>
         </div>
 
-        <button
-          onClick={handleLogout}
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: '#21262d',
-            color: '#c9d1d9',
-            border: '1px solid #30363d',
-            borderRadius: '6px',
-            cursor: 'pointer',
-          }}
-        >
-          Logout
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button
+            onClick={() => setIsModalOpen(true)}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#238636',
+              color: '#ffffff',
+              border: '1px solid #2ea043',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              fontSize: '0.9rem',
+              fontWeight: 500,
+            }}
+          >
+            + New Document
+          </button>
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#21262d',
+              color: '#c9d1d9',
+              border: '1px solid #30363d',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            Logout
+          </button>
+        </div>
       </header>
 
       <main
@@ -426,6 +472,13 @@ export function DocumentBrowser() {
           </div>
         )}
       </main>
+
+      <CreateDocumentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onCreate={handleCreateDocument}
+        existingFolders={tree}
+      />
     </div>
   );
 }

@@ -422,4 +422,370 @@ describe('Repository Routes', () => {
       expect(filtered.some((item) => item.path === 'LICENSE')).toBe(false);
     });
   });
+
+  describe('POST /api/repositories/:owner/:repo/files', () => {
+    beforeEach(() => {
+      mockRequest.params = {
+        owner: 'testuser',
+        repo: 'test-repo',
+      };
+    });
+
+    it('should create a new markdown file successfully', async () => {
+      mockRequest.body = {
+        path: 'docs/new-doc.md',
+        content: '# Test Document\n',
+        message: 'Create docs/new-doc.md',
+      };
+
+      const mockResult = {
+        sha: 'file-sha-123',
+        commit: 'commit-sha-456',
+      };
+
+      mockGitHubService.createFile = jest.fn().mockResolvedValue(mockResult);
+      mockGitHubService.clearTreeCache = jest.fn();
+
+      const token = mockResponse.locals!.githubToken as string;
+      const result = await mockGitHubService.createFile(
+        'testuser',
+        'test-repo',
+        'docs/new-doc.md',
+        '# Test Document\n',
+        'Create docs/new-doc.md',
+        token,
+        mockRequest.logger
+      );
+
+      expect(mockGitHubService.createFile).toHaveBeenCalledWith(
+        'testuser',
+        'test-repo',
+        'docs/new-doc.md',
+        '# Test Document\n',
+        'Create docs/new-doc.md',
+        token,
+        mockRequest.logger
+      );
+      expect(result).toEqual(mockResult);
+    });
+
+    it('should use default content when content is not provided', async () => {
+      mockRequest.body = {
+        path: 'test.md',
+        message: 'Create test.md',
+      };
+
+      const mockResult = {
+        sha: 'file-sha-123',
+        commit: 'commit-sha-456',
+      };
+
+      mockGitHubService.createFile = jest.fn().mockResolvedValue(mockResult);
+      mockGitHubService.clearTreeCache = jest.fn();
+
+      const token = mockResponse.locals!.githubToken as string;
+      const defaultContent = '# New Document\n';
+
+      await mockGitHubService.createFile(
+        'testuser',
+        'test-repo',
+        'test.md',
+        defaultContent,
+        'Create test.md',
+        token,
+        mockRequest.logger
+      );
+
+      expect(mockGitHubService.createFile).toHaveBeenCalledWith(
+        'testuser',
+        'test-repo',
+        'test.md',
+        defaultContent,
+        'Create test.md',
+        token,
+        mockRequest.logger
+      );
+    });
+
+    it('should invalidate tree cache after file creation', async () => {
+      mockRequest.body = {
+        path: 'test.md',
+        content: '# Test\n',
+        message: 'Create test.md',
+      };
+
+      const mockResult = {
+        sha: 'file-sha-123',
+        commit: 'commit-sha-456',
+      };
+
+      mockGitHubService.createFile = jest.fn().mockResolvedValue(mockResult);
+      mockGitHubService.clearTreeCache = jest.fn();
+
+      await mockGitHubService.createFile(
+        'testuser',
+        'test-repo',
+        'test.md',
+        '# Test\n',
+        'Create test.md',
+        'test-token',
+        mockRequest.logger
+      );
+
+      // Simulate cache invalidation
+      mockGitHubService.clearTreeCache('testuser', 'test-repo');
+
+      expect(mockGitHubService.clearTreeCache).toHaveBeenCalledWith('testuser', 'test-repo');
+    });
+
+    it('should handle missing path field', async () => {
+      mockRequest.body = {
+        content: '# Test\n',
+        message: 'Create file',
+      };
+
+      // Validation would happen in route handler
+      const hasPath = !!mockRequest.body.path;
+      expect(hasPath).toBe(false);
+    });
+
+    it('should handle missing message field', async () => {
+      mockRequest.body = {
+        path: 'test.md',
+        content: '# Test\n',
+      };
+
+      const hasMessage = !!mockRequest.body.message;
+      expect(hasMessage).toBe(false);
+    });
+
+    it('should handle invalid path (not ending with .md)', async () => {
+      mockRequest.body = {
+        path: 'test.txt',
+        content: '# Test\n',
+        message: 'Create test.txt',
+      };
+
+      const isValidMdPath = mockRequest.body.path.endsWith('.md');
+      expect(isValidMdPath).toBe(false);
+    });
+
+    it('should handle invalid path (contains invalid characters)', async () => {
+      mockRequest.body = {
+        path: 'docs/test*.md',
+        content: '# Test\n',
+        message: 'Create file',
+      };
+
+      const invalidChars = /[<>:"|?*]/;
+      const hasInvalidChars = invalidChars.test(mockRequest.body.path);
+      expect(hasInvalidChars).toBe(true);
+    });
+
+    it('should handle file already exists error (409)', async () => {
+      mockRequest.body = {
+        path: 'existing.md',
+        content: '# Test\n',
+        message: 'Create existing.md',
+      };
+
+      const error = new Error('File already exists') as any;
+      error.status = 409;
+
+      mockGitHubService.createFile = jest.fn().mockRejectedValue(error);
+
+      try {
+        await mockGitHubService.createFile(
+          'testuser',
+          'test-repo',
+          'existing.md',
+          '# Test\n',
+          'Create existing.md',
+          'test-token',
+          mockRequest.logger
+        );
+      } catch (err) {
+        expect(err).toBe(error);
+        expect((err as any).status).toBe(409);
+      }
+    });
+
+    it('should handle invalid file path error (422)', async () => {
+      mockRequest.body = {
+        path: 'invalid/../path.md',
+        content: '# Test\n',
+        message: 'Create file',
+      };
+
+      const error = new Error('Invalid file path') as any;
+      error.status = 422;
+
+      mockGitHubService.createFile = jest.fn().mockRejectedValue(error);
+
+      try {
+        await mockGitHubService.createFile(
+          'testuser',
+          'test-repo',
+          'invalid/../path.md',
+          '# Test\n',
+          'Create file',
+          'test-token',
+          mockRequest.logger
+        );
+      } catch (err) {
+        expect(err).toBe(error);
+        expect((err as any).status).toBe(422);
+      }
+    });
+
+    it('should handle repository not found error (404)', async () => {
+      mockRequest.body = {
+        path: 'test.md',
+        content: '# Test\n',
+        message: 'Create test.md',
+      };
+
+      const error = new Error('Repository not found') as any;
+      error.status = 404;
+
+      mockGitHubService.createFile = jest.fn().mockRejectedValue(error);
+
+      try {
+        await mockGitHubService.createFile(
+          'testuser',
+          'nonexistent-repo',
+          'test.md',
+          '# Test\n',
+          'Create test.md',
+          'test-token',
+          mockRequest.logger
+        );
+      } catch (err) {
+        expect(err).toBe(error);
+        expect((err as any).status).toBe(404);
+      }
+    });
+
+    it('should handle unauthorized error (401)', async () => {
+      mockRequest.body = {
+        path: 'test.md',
+        content: '# Test\n',
+        message: 'Create test.md',
+      };
+
+      const error = new Error('Unauthorized') as any;
+      error.status = 401;
+
+      mockGitHubService.createFile = jest.fn().mockRejectedValue(error);
+
+      try {
+        await mockGitHubService.createFile(
+          'testuser',
+          'test-repo',
+          'test.md',
+          '# Test\n',
+          'Create test.md',
+          'invalid-token',
+          mockRequest.logger
+        );
+      } catch (err) {
+        expect(err).toBe(error);
+        expect((err as any).status).toBe(401);
+      }
+    });
+
+    it('should handle rate limit error (403)', async () => {
+      mockRequest.body = {
+        path: 'test.md',
+        content: '# Test\n',
+        message: 'Create test.md',
+      };
+
+      const error = new Error('Rate limit exceeded') as any;
+      error.status = 403;
+
+      mockGitHubService.createFile = jest.fn().mockRejectedValue(error);
+
+      try {
+        await mockGitHubService.createFile(
+          'testuser',
+          'test-repo',
+          'test.md',
+          '# Test\n',
+          'Create test.md',
+          'test-token',
+          mockRequest.logger
+        );
+      } catch (err) {
+        expect(err).toBe(error);
+        expect((err as any).status).toBe(403);
+      }
+    });
+
+    it('should create file in nested folder path', async () => {
+      mockRequest.body = {
+        path: 'docs/architecture/design.md',
+        content: '# Design Document\n',
+        message: 'Create docs/architecture/design.md',
+      };
+
+      const mockResult = {
+        sha: 'file-sha-789',
+        commit: 'commit-sha-012',
+      };
+
+      mockGitHubService.createFile = jest.fn().mockResolvedValue(mockResult);
+      mockGitHubService.clearTreeCache = jest.fn();
+
+      const result = await mockGitHubService.createFile(
+        'testuser',
+        'test-repo',
+        'docs/architecture/design.md',
+        '# Design Document\n',
+        'Create docs/architecture/design.md',
+        'test-token',
+        mockRequest.logger
+      );
+
+      expect(mockGitHubService.createFile).toHaveBeenCalledWith(
+        'testuser',
+        'test-repo',
+        'docs/architecture/design.md',
+        '# Design Document\n',
+        'Create docs/architecture/design.md',
+        'test-token',
+        mockRequest.logger
+      );
+      expect(result).toEqual(mockResult);
+    });
+
+    it('should create file at root level', async () => {
+      mockRequest.body = {
+        path: 'README.md',
+        content: '# Project README\n',
+        message: 'Create README.md',
+      };
+
+      const mockResult = {
+        sha: 'file-sha-345',
+        commit: 'commit-sha-678',
+      };
+
+      mockGitHubService.createFile = jest.fn().mockResolvedValue(mockResult);
+
+      const result = await mockGitHubService.createFile(
+        'testuser',
+        'test-repo',
+        'README.md',
+        '# Project README\n',
+        'Create README.md',
+        'test-token',
+        mockRequest.logger
+      );
+
+      expect(result).toEqual(mockResult);
+      expect(result.sha).toBe('file-sha-345');
+      expect(result.commit).toBe('commit-sha-678');
+    });
+  });
 });

@@ -219,4 +219,114 @@ router.get('/:owner/:repo/tree', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/repositories/:owner/:repo/files
+ * Create a new markdown file in the repository
+ */
+router.post('/:owner/:repo/files', async (req, res) => {
+  try {
+    const { owner, repo } = req.params;
+    const { path, content, message } = req.body;
+    const user = req.user as SessionUser;
+    const token = res.locals.githubToken as string;
+
+    // Validate request body
+    if (!path || typeof path !== 'string') {
+      return res.status(400).json({ error: 'Missing or invalid required field: path' });
+    }
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ error: 'Missing or invalid required field: message' });
+    }
+    if (content !== undefined && typeof content !== 'string') {
+      return res.status(400).json({ error: 'Invalid field: content must be a string' });
+    }
+
+    // Validate file path ends with .md
+    if (!path.endsWith('.md')) {
+      return res.status(400).json({ error: 'File path must end with .md' });
+    }
+
+    // Validate file path doesn't contain invalid characters
+    const invalidChars = /[<>:"|?*]/;
+    if (invalidChars.test(path)) {
+      return res.status(400).json({ error: 'File path contains invalid characters' });
+    }
+
+    req.logger?.info('Creating new markdown file', {
+      userId: user.id,
+      owner,
+      repo,
+      path,
+      operation: 'createFile',
+    });
+
+    // Use provided content or default to empty document with heading
+    const fileContent = content !== undefined ? content : '# New Document\n';
+
+    const result = await githubService.createFile(
+      owner,
+      repo,
+      path,
+      fileContent,
+      message,
+      token,
+      req.logger
+    );
+
+    // Invalidate tree cache after file creation
+    githubService.clearTreeCache(owner, repo);
+
+    req.logger?.info('Successfully created markdown file', {
+      userId: user.id,
+      owner,
+      repo,
+      path,
+      sha: result.sha,
+      commitSha: result.commit,
+      operation: 'createFile',
+    });
+
+    res.status(201).json({
+      success: true,
+      sha: result.sha,
+      commit: result.commit,
+      path,
+    });
+  } catch (error) {
+    req.logger?.error(
+      'Failed to create file',
+      error instanceof Error ? error : new Error(String(error)),
+      {
+        userId: (req.user as SessionUser)?.id,
+        owner: req.params.owner,
+        repo: req.params.repo,
+        path: req.body.path,
+        operation: 'createFile',
+      }
+    );
+
+    // Handle specific GitHub API errors
+    if (error instanceof Error && 'status' in error) {
+      const status = (error as { status: number }).status;
+      if (status === 404) {
+        return res.status(404).json({ error: 'Repository not found' });
+      }
+      if (status === 409) {
+        return res.status(409).json({ error: 'File already exists' });
+      }
+      if (status === 422) {
+        return res.status(422).json({ error: 'Invalid file path or content' });
+      }
+      if (status === 401) {
+        return res.status(401).json({ error: 'GitHub token is invalid or expired' });
+      }
+      if (status === 403) {
+        return res.status(403).json({ error: 'Rate limit exceeded or insufficient permissions' });
+      }
+    }
+
+    res.status(500).json({ error: 'Failed to create file' });
+  }
+});
+
 export default router;
