@@ -41,6 +41,8 @@ interface CommentSidebarProps {
   filePath: string;
   currentUserId?: number;
   onCommentClick?: (comment: Comment) => void;
+  showResolved?: boolean;
+  onShowResolvedChange?: (showResolved: boolean) => void;
 }
 
 /**
@@ -79,14 +81,26 @@ export function CommentSidebar({
   filePath,
   currentUserId,
   onCommentClick,
+  showResolved: showResolvedProp,
+  onShowResolvedChange,
 }: CommentSidebarProps) {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showResolved, setShowResolved] = useState(false);
+  const [showResolvedInternal, setShowResolvedInternal] = useState(false);
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState('');
   const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
+
+  // Use controlled or uncontrolled mode for showResolved
+  const showResolved = showResolvedProp ?? showResolvedInternal;
+  const setShowResolved = (value: boolean) => {
+    if (onShowResolvedChange) {
+      onShowResolvedChange(value);
+    } else {
+      setShowResolvedInternal(value);
+    }
+  };
 
   // Fetch comments from backend
   const fetchComments = async () => {
@@ -285,6 +299,7 @@ export function CommentSidebar({
                 <div
                   key={comment.id}
                   className={`comment-thread ${comment.resolved ? 'resolved' : ''}`}
+                  data-comment-id={comment.id}
                 >
                   <div className="comment-thread-header">
                     <div className="comment-header">
