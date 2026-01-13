@@ -1,0 +1,94 @@
+{
+  "project": "AmpCode MVP",
+  "branchName": "main",
+  "userStories": [
+    {
+      "id": "US-MVP-001",
+      "title": "User authentication via GitHub OAuth",
+      "phase": "MVP",
+      "passes": true
+    },
+    {
+      "id": "US-MVP-001A",
+      "title": "Select GitHub repository to edit",
+      "phase": "MVP",
+      "passes": true
+    },
+    {
+      "id": "US-MVP-001B",
+      "title": "Browse markdown files with folder navigation",
+      "phase": "MVP",
+      "passes": true
+    },
+    {
+      "id": "US-MVP-002",
+      "title": "Create new markdown document in specified folder",
+      "phase": "MVP",
+      "passes": true
+    },
+    {
+      "id": "US-MVP-003",
+      "title": "View document list with folder hierarchy",
+      "phase": "MVP",
+      "passes": true
+    },
+    {
+      "id": "US-MVP-004",
+      "title": "Automatic GitHub commits with conflict handling",
+      "phase": "MVP",
+      "passes": true
+    },
+    {
+      "id": "US-MVP-009",
+      "title": "Implement GitHub service layer with Octokit",
+      "phase": "MVP",
+      "passes": true
+    },
+    {
+      "id": "US-MVP-010",
+      "title": "Update user presence with GitHub avatars",
+      "phase": "MVP",
+      "passes": true
+    },
+    {
+      "id": "US-MVP-005",
+      "title": "Sidebar commenting system for document collaboration",
+      "phase": "MVP",
+      "passes": true
+    },
+    {
+      "id": "US-MVP-006",
+      "title": "Reply to comments in thread",
+      "phase": "MVP",
+      "passes": true,
+      "acceptanceCriteria": [
+        "User can click 'Reply' on any existing comment",
+        "Reply input field appears below the comment",
+        "User can type and submit a reply",
+        "Reply is displayed indented below the parent comment",
+        "Replies show user avatar, name, and timestamp",
+        "Replies are stored in database with parent_id reference",
+        "Real-time updates show new replies to other users",
+        "Empty replies are prevented",
+        "Validation prevents nesting deeper than 1 level (replies to replies become replies to parent)",
+        "Backend supports POST /api/comments with parentId"
+      ]
+    },
+    {
+      "id": "US-MVP-007",
+      "title": "Resolve comments and hide from view",
+      "phase": "MVP",
+      "passes": true,
+      "acceptanceCriteria": [
+        "User can click 'Resolve' button on a comment thread",
+        "Entire thread (parent + replies) is marked as resolved in database",
+        "Resolved threads are hidden from default view",
+        "User can toggle 'Show Resolved' filter",
+        "Resolved threads appear with different visual style (dimmed/checked)",
+        "User can 'Unresolve' a thread to bring it back",
+        "Resolution status syncs in real-time",
+        "Backend supports PATCH /api/comments/:id/resolve"
+      ]
+    }
+  ]
+}

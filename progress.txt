@@ -1,0 +1,72 @@
+## Codebase Patterns
+- Comments are stored as YAML files in `.mume/` folder in GitHub repos, not in a database
+- Comment replies use a flat array within comments (no separate parent_id), preventing nested replies by architecture
+- Frontend uses 10-second polling for comment updates (no WebSocket for comments)
+- Backend API requires `documentPath`, `repoOwner`, `repoName` for all comment operations
+- E2E tests use Playwright with mocked GitHub API responses in `tests/e2e/mocks/github-api.mock.ts`
+- Comment sidebar has overlay backdrop that can intercept clicks - use close button instead of toggle for closing
+
+## Initial Setup
+- Created progress.txt
+
+---
+
+## 2026-01-13 - US-MVP-006: Reply to comments in thread
+
+### What was implemented
+- Fixed frontend `CommentSidebar.tsx` to send required parameters (`documentPath`, `repoOwner`, `repoName`) for:
+  - Reply submission: `POST /api/comments/:commentId/replies`
+  - Resolve/unresolve: `PATCH /api/comments/:commentId`  
+  - Delete comment: `DELETE /api/comments/:commentId` (as query params)
+- Fixed flaky E2E test in `comments.test.ts` - sidebar toggle was being intercepted by backdrop overlay
+
+### Files changed
+- `apps/frontend/src/components/CommentSidebar.tsx` - Added required API parameters
+- `tests/e2e/specs/comments.test.ts` - Fixed flaky test, removed redundant serial config
+
+### Quality checks
+- All 20 E2E comment tests pass
+- All 238 frontend unit tests pass
+- TypeScript type checking passes
+- Backend `comment-file.service.test.ts` passes (9 tests)
+
+### Learnings for future iterations
+- The comment system architecture uses flat arrays for replies (no nested parent_id) - this is intentional to prevent deep nesting
+- Comment sidebar has an overlay backdrop (`comment-sidebar-backdrop`) that intercepts clicks on elements behind it
+- E2E mocks in `github-api.mock.ts` work differently than real backend - mocks search all comments by ID, backend requires path/repo info
+- When testing sidebar toggle, use the close button inside sidebar instead of the toggle button
+
+---
+
+## 2026-01-13 - US-MVP-007: Resolve comments and hide from view
+
+### What was implemented
+- Same frontend fix as US-MVP-006 (both stories were blocked by the same bug)
+- The `handleResolveToggle` function now sends required parameters for `PATCH /api/comments/:commentId`
+- The `handleConfirmDelete` function now sends required parameters for `DELETE /api/comments/:commentId`
+
+### Files changed
+- Same as US-MVP-006 (changes address both stories)
+
+### Quality checks
+- E2E tests for resolve functionality all pass:
+  - `should show resolve button on comments`
+  - `should resolve comment and show resolved state`  
+  - `should toggle show/hide resolved comments`
+- E2E tests for delete functionality all pass:
+  - `should show delete button only for own comments`
+  - `should show confirmation dialog when deleting`
+  - `should delete comment when confirmed`
+  - `should cancel deletion when clicking cancel`
+
+### Acceptance criteria verified
+- Resolve button visible on comments
+- Resolved status persists (via GitHub file storage)
+- Resolved threads hidden by default (filtered in frontend)
+- Show/hide resolved toggle works
+- Resolved threads dimmed with `.resolved` CSS class
+- Unresolve works (same button toggles state)
+- 10-second polling for sync
+- Backend PATCH endpoint works
+
+---
