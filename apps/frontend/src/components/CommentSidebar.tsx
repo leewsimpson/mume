@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import './CommentSidebar.css';
+import { API_URL } from '../config/api';
 
 interface User {
   id: number;
@@ -112,7 +113,7 @@ export function CommentSidebar({
       setError(null);
 
       const response = await fetch(
-        `http://localhost:3000/api/repositories/${owner}/${repo}/comments?filePath=${encodeURIComponent(filePath)}`,
+        `${API_URL}/api/repositories/${owner}/${repo}/comments?filePath=${encodeURIComponent(filePath)}`,
         {
           credentials: 'include',
         }
@@ -160,7 +161,7 @@ export function CommentSidebar({
 
     try {
       const response = await fetch(
-        `http://localhost:3000/api/comments/${commentId}/replies`,
+        `${API_URL}/api/comments/${commentId}/replies`,
         {
           method: 'POST',
           headers: {
@@ -189,7 +190,7 @@ export function CommentSidebar({
   const handleResolveToggle = async (commentId: number, currentResolved: boolean) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/comments/${commentId}`,
+        `${API_URL}/api/comments/${commentId}`,
         {
           method: 'PATCH',
           headers: {
@@ -221,7 +222,7 @@ export function CommentSidebar({
     try {
       setDeletingCommentId(deleteConfirmCommentId);
       const response = await fetch(
-        `http://localhost:3000/api/comments/${deleteConfirmCommentId}`,
+        `${API_URL}/api/comments/${deleteConfirmCommentId}`,
         {
           method: 'DELETE',
           credentials: 'include',

@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
 import type { Awareness } from 'y-protocols/awareness';
+import { WS_URL } from '../config/api';
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected';
 
@@ -39,7 +40,7 @@ function generateUserColor(): string {
  * Custom hook to initialize Yjs WebSocket provider with Awareness
  * @param documentId - The document room/ID to connect to
  * @param userName - The name of the current user for presence
- * @param wsUrl - WebSocket URL (defaults to ws://localhost:3000)
+ * @param wsUrl - WebSocket URL (defaults to WS_URL from config)
  * @param avatarUrl - Optional GitHub avatar URL for the current user
  * @param githubId - Optional GitHub ID for the current user
  * @returns Yjs document, text type, provider, awareness, and connection status
@@ -47,7 +48,7 @@ function generateUserColor(): string {
 export function useYjsProvider(
   documentId: string,
   userName: string,
-  wsUrl = 'ws://localhost:3000',
+  wsUrl = WS_URL,
   avatarUrl = '',
   githubId = ''
 ): YjsProviderResult {

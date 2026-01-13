@@ -14,6 +14,7 @@ import { CreateDocumentModal } from './CreateDocumentModal';
 import type { CommentRange } from './CommentHighlights';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faComments, faExclamationTriangle, faFileAlt, faFolderOpen, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { API_URL, WS_URL } from '../config/api';
 
 interface EditorLayoutProps {
   userName: string;
@@ -68,7 +69,7 @@ export function EditorLayout({
   const isYtextInitializedRef = useRef(false);
 
   // Initialize Yjs provider with document ID from route and user name
-  const { ydoc: _ydoc, ytext, provider: _provider, awareness, status, error, reconnectAttempts } = useYjsProvider(documentId, userName, 'ws://localhost:3000', avatarUrl, githubId);
+  const { ydoc: _ydoc, ytext, provider: _provider, awareness, status, error, reconnectAttempts } = useYjsProvider(documentId, userName, WS_URL, avatarUrl, githubId);
 
   // Sync markdown state with Y.Text for preview pane
   useEffect(() => {
@@ -108,7 +109,7 @@ export function EditorLayout({
 
     try {
       const response = await fetch(
-        `http://localhost:3000/api/repositories/${owner}/${repo}/comments?filePath=${encodeURIComponent(filePath)}`,
+        `${API_URL}/api/repositories/${owner}/${repo}/comments?filePath=${encodeURIComponent(filePath)}`,
         { credentials: 'include' }
       );
 
@@ -155,7 +156,7 @@ export function EditorLayout({
 
     try {
       const response = await fetch(
-        `http://localhost:3000/api/repositories/${owner}/${repo}/documents/${encodeURIComponent(documentId)}/save`,
+        `${API_URL}/api/repositories/${owner}/${repo}/documents/${encodeURIComponent(documentId)}/save`,
         {
           method: 'POST',
           credentials: 'include',
@@ -218,7 +219,7 @@ export function EditorLayout({
       throw new Error('Missing required information to create comment');
     }
 
-    const response = await fetch('http://localhost:3000/api/comments', {
+    const response = await fetch(`${API_URL}/api/comments`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -325,7 +326,7 @@ export function EditorLayout({
     const fullPath = folderPath ? `${folderPath}/${filename}` : filename;
 
     const response = await fetch(
-      `http://localhost:3000/api/repositories/${owner}/${repo}/files`,
+      `${API_URL}/api/repositories/${owner}/${repo}/files`,
       {
         method: 'POST',
         headers: {
@@ -356,7 +357,7 @@ export function EditorLayout({
     const fetchFolders = async () => {
       try {
         const response = await fetch(
-          `http://localhost:3000/api/repositories/${owner}/${repo}/tree`,
+          `${API_URL}/api/repositories/${owner}/${repo}/tree`,
           { credentials: 'include' }
         );
 
