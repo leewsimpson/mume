@@ -57,7 +57,7 @@ router.post('/test-login', async (req, res) => {
  * GET /auth/github
  * Initiate GitHub OAuth flow
  */
-router.get('/github', (req, res, next) => {
+router.get('/github', (req, _res, next) => {
   console.log('[AUTH] GitHub OAuth initiated', { 
     sessionID: req.sessionID,
     cookies: req.headers.cookie ? 'present' : 'none'
@@ -71,7 +71,7 @@ router.get('/github', (req, res, next) => {
  */
 router.get(
   '/github/callback',
-  (req, res, next) => {
+  (req, _res, next) => {
     console.log('[AUTH] GitHub callback received', {
       sessionID: req.sessionID,
       query: req.query.code ? 'code present' : 'no code',
