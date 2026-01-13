@@ -45,7 +45,7 @@ export function CommentHighlights({
     return comments.filter(comment => showResolved || !comment.resolved);
   }, [comments, showResolved]);
 
-  // Calculate highlight rectangles for a text range
+  // Calculate highlight rectangles for a text range using textarea-caret technique
   const calculateRangeRects = useCallback((
     textarea: HTMLTextAreaElement,
     charStart: number,
@@ -61,37 +61,39 @@ export function CommentHighlights({
     if (!selectedText) return [];
 
     try {
-      // Create a hidden mirror div with identical styling
-      const mirror = document.createElement('div');
+      // Get textarea's bounding rect and computed styles
+      const textareaRect = textarea.getBoundingClientRect();
       const styles = window.getComputedStyle(textarea);
 
-      // Copy all relevant styles from textarea to mirror
-      const stylesToCopy = [
-        'fontSize', 'fontFamily', 'fontWeight', 'fontStyle',
-        'lineHeight', 'letterSpacing', 'wordSpacing', 'textTransform',
-        'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
-        'borderWidth', 'boxSizing', 'wordWrap', 'overflowWrap'
+      // Create a mirror div positioned exactly over the textarea
+      const mirror = document.createElement('div');
+
+      // Copy all text-affecting styles
+      const properties = [
+        'direction', 'boxSizing', 'width', 'height', 'overflowX', 'overflowY',
+        'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+        'borderStyle', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+        'fontStyle', 'fontVariant', 'fontWeight', 'fontStretch', 'fontSize',
+        'fontSizeAdjust', 'lineHeight', 'fontFamily', 'textAlign', 'textTransform',
+        'textIndent', 'textDecoration', 'letterSpacing', 'wordSpacing',
+        'tabSize', 'MozTabSize'
       ];
 
-      stylesToCopy.forEach(prop => {
+      properties.forEach(prop => {
         const value = styles.getPropertyValue(prop.replace(/([A-Z])/g, '-$1').toLowerCase());
         if (value) {
           mirror.style.setProperty(prop.replace(/([A-Z])/g, '-$1').toLowerCase(), value);
         }
       });
 
-      // Set width explicitly
-      mirror.style.width = `${textarea.clientWidth}px`;
-
-      // Additional styles for mirror
+      // Position mirror exactly over the textarea
       mirror.style.position = 'absolute';
-      mirror.style.top = '-9999px';
-      mirror.style.left = '-9999px';
+      mirror.style.top = `${textareaRect.top + window.scrollY}px`;
+      mirror.style.left = `${textareaRect.left + window.scrollX}px`;
       mirror.style.visibility = 'hidden';
-      mirror.style.height = 'auto';
-      mirror.style.overflow = 'hidden';
       mirror.style.whiteSpace = 'pre-wrap';
       mirror.style.wordWrap = 'break-word';
+      mirror.style.overflow = 'hidden';
       mirror.style.pointerEvents = 'none';
 
       // Add text before the selection
@@ -108,24 +110,23 @@ export function CommentHighlights({
       const textAfter = document.createTextNode(content.substring(charEnd));
       mirror.appendChild(textAfter);
 
-      // Temporarily add mirror to DOM for measurement
+      // Add to DOM for measurement
       document.body.appendChild(mirror);
 
       // Force layout calculation
       mirror.offsetHeight;
 
-      // Get selection span bounds
+      // Get selection span bounds relative to viewport
       const spanRect = selectionSpan.getBoundingClientRect();
-      const mirrorRect = mirror.getBoundingClientRect();
-
-      // Calculate relative position from mirror top-left
-      const top = spanRect.top - mirrorRect.top;
-      const left = spanRect.left - mirrorRect.left;
-      const width = spanRect.width;
-      const height = spanRect.height;
 
       // Clean up
       document.body.removeChild(mirror);
+
+      // Calculate position relative to textarea (accounting for scroll)
+      const top = spanRect.top - textareaRect.top - textarea.scrollTop;
+      const left = spanRect.left - textareaRect.left - textarea.scrollLeft;
+      const width = spanRect.width;
+      const height = spanRect.height;
 
       // Validate position values
       if (isNaN(top) || isNaN(left) || isNaN(width) || isNaN(height)) {
@@ -133,14 +134,10 @@ export function CommentHighlights({
         return [];
       }
 
-      // Adjust for textarea scroll position
-      const adjustedTop = top - textarea.scrollTop;
-      const adjustedLeft = left - textarea.scrollLeft;
-
       return [{
         commentId,
-        top: adjustedTop,
-        left: adjustedLeft,
+        top,
+        left,
         width,
         height,
         resolved,

@@ -1,4 +1,4 @@
-import { useState, useMemo, ChangeEvent } from 'react';
+import { useState, useMemo, useEffect, ChangeEvent } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFolder } from '@fortawesome/free-solid-svg-icons';
 
@@ -14,6 +14,7 @@ interface CreateDocumentModalProps {
   onClose: () => void;
   onCreate: (path: string, filename: string) => Promise<void>;
   existingFolders: TreeNode[];
+  initialFolderPath?: string;
 }
 
 export function CreateDocumentModal({
@@ -21,13 +22,22 @@ export function CreateDocumentModal({
   onClose,
   onCreate,
   existingFolders,
+  initialFolderPath = '',
 }: CreateDocumentModalProps) {
   const [filename, setFilename] = useState('');
-  const [folderPath, setFolderPath] = useState('');
+  const [folderPath, setFolderPath] = useState(initialFolderPath);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [inputMode, setInputMode] = useState<'picker' | 'text'>('picker');
+  const [inputMode, setInputMode] = useState<'picker' | 'text'>(initialFolderPath ? 'text' : 'picker');
   const [showValidation, setShowValidation] = useState(false);
+
+  // Update folder path when initialFolderPath changes (modal opens with new context)
+  useEffect(() => {
+    if (isOpen) {
+      setFolderPath(initialFolderPath);
+      setInputMode(initialFolderPath ? 'text' : 'picker');
+    }
+  }, [isOpen, initialFolderPath]);
 
   // Extract all folder paths from tree structure
   const folderPaths = useMemo(() => {
@@ -342,6 +352,7 @@ export function CreateDocumentModal({
           margin: 0;
           font-size: 1.5rem;
           font-weight: 600;
+          color: #111827;
         }
 
         .close-button {
@@ -395,6 +406,8 @@ export function CreateDocumentModal({
           border: 1px solid #d1d5db;
           border-radius: 4px;
           font-size: 1rem;
+          background: white;
+          color: #111827;
         }
 
         .form-group input[type="text"]:focus {
@@ -421,6 +434,7 @@ export function CreateDocumentModal({
           border-radius: 4px;
           cursor: pointer;
           font-size: 0.875rem;
+          color: #374151;
         }
 
         .input-mode-toggle button.active {
@@ -456,6 +470,7 @@ export function CreateDocumentModal({
           cursor: pointer;
           border-radius: 4px;
           margin-bottom: 0.25rem;
+          color: #374151;
         }
 
         .folder-item:hover:not(:disabled) {

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useYjsProvider } from '../hooks/useYjsProvider';
 import { MarkdownEditor, type MarkdownEditorRef } from './MarkdownEditor';
@@ -9,9 +10,10 @@ import { SaveStatus } from './SaveStatus';
 import { SaveNowButton } from './SaveNowButton';
 import { CommentSidebar, type Comment } from './CommentSidebar';
 import { AddCommentModal } from './AddCommentModal';
+import { CreateDocumentModal } from './CreateDocumentModal';
 import type { CommentRange } from './CommentHighlights';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faComments, faExclamationTriangle, faFileAlt } from '@fortawesome/free-solid-svg-icons';
+import { faComments, faExclamationTriangle, faFileAlt, faFolderOpen, faPlus } from '@fortawesome/free-solid-svg-icons';
 
 interface EditorLayoutProps {
   userName: string;
@@ -54,6 +56,10 @@ export function EditorLayout({
   const [comments, setComments] = useState<CommentRange[]>([]);
   const [showResolvedComments, setShowResolvedComments] = useState(false);
   const [activeCommentId, setActiveCommentId] = useState<number | null>(null);
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [existingFolders, setExistingFolders] = useState<Array<{ name: string; path: string; type: 'file' | 'folder'; children?: any[] }>>([]);
+
+  const navigate = useNavigate();
 
   // Ref for MarkdownEditor to enable scroll-to functionality
   const editorRef = useRef<MarkdownEditorRef>(null);
@@ -273,23 +279,177 @@ export function EditorLayout({
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  // Extract filename from path
+  // Document browser URL
+  const documentBrowserUrl = owner && repo ? `/repositories/${owner}/${repo}` : '/repositories';
+
+  // Extract filename and folder from path
   const fileName = filePath?.split('/').pop() || documentId;
-  const folderPath = filePath?.includes('/') 
+  const currentFolderPath = filePath?.includes('/') 
     ? filePath.substring(0, filePath.lastIndexOf('/'))
-    : null;
+    : '';
+
+  // Navigation with unsaved changes confirmation
+  const confirmNavigation = useCallback((targetUrl: string) => {
+    if (hasUnsavedChanges) {
+      const confirmed = window.confirm('You have unsaved changes. Leave anyway?');
+      if (!confirmed) {
+        return false;
+      }
+    }
+    navigate(targetUrl);
+    return true;
+  }, [hasUnsavedChanges, navigate]);
+
+  // Handle back/files button click
+  const handleBackClick = useCallback(() => {
+    confirmNavigation(documentBrowserUrl);
+  }, [confirmNavigation, documentBrowserUrl]);
+
+  // Handle new document button click
+  const handleNewDocumentClick = useCallback(() => {
+    if (hasUnsavedChanges) {
+      const confirmed = window.confirm('You have unsaved changes. Leave anyway?');
+      if (!confirmed) {
+        return;
+      }
+    }
+    setIsCreateModalOpen(true);
+  }, [hasUnsavedChanges]);
+
+  // Handle document creation
+  const handleCreateDocument = useCallback(async (folderPath: string, filename: string) => {
+    if (!owner || !repo) {
+      throw new Error('Repository information not available');
+    }
+
+    const fullPath = folderPath ? `${folderPath}/${filename}` : filename;
+
+    const response = await fetch(
+      `http://localhost:3000/api/repositories/${owner}/${repo}/files`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          path: fullPath,
+          content: `# ${filename.replace('.md', '')}\n\n`,
+          message: `Create ${fullPath}`,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Failed to create document');
+    }
+
+    // Navigate to new document
+    navigate(`/repositories/${owner}/${repo}/edit/${encodeURIComponent(fullPath)}`);
+  }, [owner, repo, navigate]);
+
+  // Fetch existing folders for CreateDocumentModal
+  useEffect(() => {
+    if (!owner || !repo) return;
+
+    const fetchFolders = async () => {
+      try {
+        const response = await fetch(
+          `http://localhost:3000/api/repositories/${owner}/${repo}/tree`,
+          { credentials: 'include' }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          setExistingFolders(data.tree || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch folder tree:', err);
+      }
+    };
+
+    fetchFolders();
+  }, [owner, repo]);
+
+  // Keyboard shortcut: Escape to navigate back
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Escape key - navigate back to document browser
+      if (event.key === 'Escape') {
+        // Don't trigger if a modal is open
+        if (isModalOpen || isCreateModalOpen) return;
+        
+        event.preventDefault();
+        confirmNavigation(documentBrowserUrl);
+      }
+      // Ctrl+N / Cmd+N - new document
+      if ((event.ctrlKey || event.metaKey) && event.key === 'n') {
+        event.preventDefault();
+        handleNewDocumentClick();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [confirmNavigation, documentBrowserUrl, isModalOpen, isCreateModalOpen, handleNewDocumentClick]);
 
   return (
     <div className="editor-layout">
       <div className="editor-header">
         <div className="editor-header__left">
-          <div className="editor-header__doc">
-            <FontAwesomeIcon icon={faFileAlt} className="editor-header__doc-icon" />
-            <span className="editor-header__doc-name">{fileName}</span>
-            {folderPath && (
-              <span className="editor-header__doc-path">{folderPath}/</span>
+          {/* Back/Files button */}
+          <button
+            className="btn btn--icon btn--ghost"
+            onClick={handleBackClick}
+            title="Back to files (Esc)"
+          >
+            <FontAwesomeIcon icon={faFolderOpen} />
+            <span className="btn__label">Files</span>
+          </button>
+
+          {/* New Document button */}
+          <button
+            className="btn btn--icon btn--ghost"
+            onClick={handleNewDocumentClick}
+            title="New document (Ctrl+N)"
+            disabled={isCreateModalOpen}
+          >
+            <FontAwesomeIcon icon={faPlus} />
+            <span className="btn__label">New</span>
+          </button>
+
+          {/* Breadcrumb navigation */}
+          <div className="editor-header__breadcrumb" data-testid="editor-breadcrumb">
+            <button
+              className="breadcrumb__segment breadcrumb__segment--repo"
+              onClick={handleBackClick}
+              title={`${owner}/${repo}`}
+            >
+              {repo}
+            </button>
+            {currentFolderPath && (
+              <>
+                <span className="breadcrumb__separator">/</span>
+                <button
+                  className="breadcrumb__segment breadcrumb__segment--folder"
+                  onClick={handleBackClick}
+                  title={currentFolderPath}
+                >
+                  {currentFolderPath}
+                </button>
+              </>
             )}
+            <span className="breadcrumb__separator">/</span>
+            <span className="breadcrumb__segment breadcrumb__segment--file">
+              <FontAwesomeIcon icon={faFileAlt} className="breadcrumb__file-icon" />
+              {fileName}
+            </span>
           </div>
+
           {(saveStatus === 'saving' || saveStatus === 'saved' || saveStatus === 'error') && (
             <SaveStatus status={saveStatus} />
           )}
@@ -374,6 +534,15 @@ export function EditorLayout({
           charEnd={selectedRange.charEnd}
         />
       )}
+
+      {/* Create Document Modal */}
+      <CreateDocumentModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onCreate={handleCreateDocument}
+        existingFolders={existingFolders}
+        initialFolderPath={currentFolderPath}
+      />
     </div>
   );
 }

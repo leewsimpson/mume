@@ -184,6 +184,71 @@ h1 {
   margin-left: var(--space-1);
 }
 
+/* Breadcrumb navigation in editor header */
+.editor-header__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: 0.875rem;
+  margin-left: var(--space-2);
+}
+
+.breadcrumb__segment {
+  background: none;
+  border: none;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.breadcrumb__segment:hover {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
+}
+
+.breadcrumb__segment--repo {
+  font-weight: 500;
+  color: var(--color-text-link);
+}
+
+.breadcrumb__segment--folder {
+  color: var(--color-text-secondary);
+}
+
+.breadcrumb__segment--file {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  cursor: default;
+  padding: var(--space-1) var(--space-2);
+}
+
+.breadcrumb__segment--file:hover {
+  background-color: transparent;
+}
+
+.breadcrumb__file-icon {
+  color: var(--color-text-link);
+  font-size: 0.75rem;
+}
+
+.breadcrumb__separator {
+  color: var(--color-text-muted);
+  font-size: 0.75rem;
+}
+
+/* Button label styling */
+.btn__label {
+  margin-left: var(--space-1);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
 .connection-status {
   display: flex;
   align-items: center;

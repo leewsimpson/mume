@@ -18,6 +18,32 @@ try {
 // Interval for checking and committing changes (30 seconds)
 const SYNC_INTERVAL_MS = 30000;
 
+// Track which documents already have update listeners attached
+const documentsWithListeners = new Set<string>();
+
+/**
+ * Attach an update listener to a Y.Doc to track changes
+ * @param documentId - Document identifier
+ * @param ydoc - Y.Doc instance
+ */
+function attachUpdateListener(documentId: string, ydoc: Y.Doc): void {
+  if (documentsWithListeners.has(documentId)) {
+    return; // Already has a listener
+  }
+
+  // Listen for updates to the document
+  // The 'update' event fires when any change is made to the Y.Doc
+  ydoc.on('update', (_update: Uint8Array, origin: unknown) => {
+    // Skip updates that originate from persistence (loading initial state)
+    // Only mark as changed for updates from WebSocket sync (origin will be the connection)
+    if (origin !== null && origin !== undefined) {
+      documentStateService.markChanged(documentId);
+    }
+  });
+
+  documentsWithListeners.add(documentId);
+}
+
 // Maximum retries for conflict resolution
 const MAX_CONFLICT_RETRIES = 3;
 
@@ -36,26 +62,16 @@ function formatCommitMessage(filePath: string, editors: Set<string>): string {
 }
 
 /**
- * Check if a Y.Doc has been modified since a given timestamp
- * This is a simple heuristic - in production, you'd track actual dirty state
- * @param ydoc - Y.Doc instance
- * @param lastSaved - Last save timestamp
- * @returns True if document appears to have changes
+ * Check if a document has unsaved changes by examining metadata
+ * @param documentId - Document identifier
+ * @returns True if document has unsaved changes
  */
-function hasChanges(ydoc: Y.Doc, lastSaved: Date): boolean {
-  // Simple heuristic: if the document was modified in the last sync interval, consider it dirty
-  // In a more robust implementation, we'd track the actual update state
-  const ytext = ydoc.getText('content');
-  
-  if (!ytext) {
+function hasChanges(documentId: string): boolean {
+  const metadata = documentStateService.getDocument(documentId);
+  if (!metadata) {
     return false;
   }
-  
-  const content = ytext.toString();
-
-  // If document has content and hasn't been saved recently, consider it dirty
-  const timeSinceLastSave = Date.now() - lastSaved.getTime();
-  return content.length > 0 && timeSinceLastSave > SYNC_INTERVAL_MS;
+  return metadata.hasUnsavedChanges;
 }
 
 /**
@@ -264,6 +280,14 @@ export async function runGitHubSync(logger?: Logger): Promise<void> {
     return;
   }
 
+  // Attach update listeners to all registered Y.Docs that we can find
+  for (const [documentId] of registeredDocs) {
+    const ydoc = yjsDocs.get(documentId);
+    if (ydoc) {
+      attachUpdateListener(documentId, ydoc);
+    }
+  }
+
   // Filter to documents that have changes and are not currently being saved
   const docsToSync = registeredDocs.filter(([documentId, metadata]) => {
     if (metadata.isSaving) {
@@ -277,8 +301,8 @@ export async function runGitHubSync(logger?: Logger): Promise<void> {
       return false;
     }
 
-    // Check if document has changes
-    return hasChanges(ydoc, metadata.lastSaved);
+    // Check if document has actual unsaved changes
+    return hasChanges(documentId);
   });
 
   if (docsToSync.length === 0) {

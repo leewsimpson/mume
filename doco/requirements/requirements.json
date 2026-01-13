@@ -543,6 +543,53 @@
       "priority": 212,
       "passes": false,
       "notes": ""
+    },
+    {
+      "id": "US-MVP-013",
+      "phase": "MVP",
+      "title": "Editor toolbar navigation",
+      "description": "As a user, I want to navigate back to the document browser or open a different file without using browser navigation, so I can efficiently switch between documents.",
+      "acceptanceCriteria": [
+        "Back/Files button added to editor toolbar (left side, before document name)",
+        "Back button uses folder icon (faFolderOpen) with 'Files' label or tooltip",
+        "Clicking Back button navigates to document browser: /repositories/:owner/:repo",
+        "Document name in header is clickable and also navigates to document browser",
+        "Breadcrumb-style path display: 'owner/repo / folder / filename.md' with clickable segments",
+        "Clicking repository segment (owner/repo) navigates to document browser root",
+        "Clicking folder segment navigates to document browser with that folder expanded",
+        "If document has unsaved changes, show confirmation dialog before navigating away",
+        "Confirmation dialog: 'You have unsaved changes. Leave anyway?' with 'Stay' and 'Leave' buttons",
+        "Keyboard shortcut: Escape key shows confirmation (if unsaved) then navigates to document browser",
+        "Consistent button styling with existing toolbar buttons (btn btn--icon btn--ghost)",
+        "Typecheck passes",
+        "Test navigation from editor to document browser with saved and unsaved states"
+      ],
+      "priority": 213,
+      "passes": true,
+      "notes": "Completed: Back/Files button with faFolderOpen icon added to editor toolbar. Breadcrumb navigation shows repo/folder/filename with clickable segments. Unsaved changes confirmation dialog (window.confirm) before navigation. Escape key shortcut navigates to document browser. E2E tests in editor-navigation.test.ts (9 tests for US-MVP-013). Typecheck passes."
+    },
+    {
+      "id": "US-MVP-014",
+      "phase": "MVP",
+      "title": "Create new document from editor",
+      "description": "As a user, I want to create a new document without leaving the editor, so I can quickly start a new file while working.",
+      "acceptanceCriteria": [
+        "New Document button added to editor toolbar (next to Back/Files button)",
+        "New Document button uses plus icon (faPlus) with 'New' label or tooltip",
+        "Clicking opens CreateDocumentModal (existing component from US-MVP-002)",
+        "Modal pre-fills folder path with current document's folder (if applicable)",
+        "On successful creation, navigate to new document in editor",
+        "If current document has unsaved changes, show confirmation dialog before creating new document",
+        "Keyboard shortcut: Ctrl+N (Cmd+N on Mac) opens new document modal",
+        "Prevent browser default new window when Ctrl+N pressed",
+        "Button disabled state while modal is open or during document creation",
+        "Consistent button styling with existing toolbar buttons",
+        "Typecheck passes",
+        "Test creating new document from editor, verify navigation to new file"
+      ],
+      "priority": 214,
+      "passes": true,
+      "notes": "Completed: New Document button with faPlus icon added to editor toolbar. Opens CreateDocumentModal with initialFolderPath pre-filled from current document's folder. Ctrl+N/Cmd+N keyboard shortcut with preventDefault to block browser new window. Unsaved changes confirmation before opening modal. E2E tests in editor-navigation.test.ts (7 tests for US-MVP-014). Typecheck passes."
     }
   ]
 }

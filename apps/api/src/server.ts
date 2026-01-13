@@ -43,10 +43,32 @@ async function bootstrap() {
   }));
 
   // Initialize Redis client for session store
-  const redisClient = createClient({ url: REDIS_URL });
-  redisClient.on('error', (err) => console.error('Redis Client Error', err));
-  await redisClient.connect();
-  console.log('✅ Redis connected');
+  console.log(`Connecting to Redis at: ${REDIS_URL}`);
+  const redisClient = createClient({ 
+    url: REDIS_URL,
+    socket: {
+      connectTimeout: 10000, // 10 second timeout
+      reconnectStrategy: (retries) => {
+        console.log(`Redis reconnect attempt ${retries}`);
+        if (retries > 10) {
+          return new Error('Redis max reconnect attempts reached');
+        }
+        return Math.min(retries * 100, 3000); // exponential backoff up to 3s
+      }
+    }
+  });
+  redisClient.on('error', (err) => console.error('Redis Client Error:', err.message));
+  redisClient.on('connect', () => console.log('Redis client connecting...'));
+  redisClient.on('ready', () => console.log('✅ Redis connected and ready'));
+  
+  try {
+    await redisClient.connect();
+    console.log('✅ Redis connection established');
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('❌ Failed to connect to Redis:', errorMessage);
+    throw new Error(`Redis connection failed: ${errorMessage}`);
+  }
 
   // Configure session with Redis store
   app.use(
@@ -74,12 +96,29 @@ async function bootstrap() {
   app.use('/api/repositories', repositoryRoutes);
   app.use('/api/comments', commentRoutes);
 
-  // Health check endpoint
-  app.get('/health', (_req, res) => {
-    res.json({
+  // Health check endpoint with dependency checks
+  app.get('/health', async (_req, res) => {
+    const health = {
       status: 'ok',
-      timestamp: new Date().toISOString()
-    });
+      timestamp: new Date().toISOString(),
+      dependencies: {
+        redis: 'unknown'
+      }
+    };
+
+    try {
+      // Check Redis connectivity
+      const pingResult = await redisClient.ping();
+      health.dependencies.redis = pingResult === 'PONG' ? 'connected' : 'error';
+    } catch (error) {
+      health.status = 'degraded';
+      health.dependencies.redis = 'disconnected';
+      console.error('Health check: Redis ping failed', error);
+    }
+
+    // Return 503 if any critical dependency is down
+    const statusCode = health.status === 'ok' ? 200 : 503;
+    res.status(statusCode).json(health);
   });
 
   // Create HTTP server
