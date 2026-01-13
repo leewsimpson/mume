@@ -156,10 +156,14 @@ export function EditorLayout({
 
     try {
       const response = await fetch(
-        `${API_URL}/api/repositories/${owner}/${repo}/documents/${encodeURIComponent(documentId)}/save`,
+        `${API_URL}/api/repositories/${owner}/${repo}/documents/save`,
         {
           method: 'POST',
           credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ documentId }),
         }
       );
 

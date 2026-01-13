@@ -291,13 +291,19 @@ router.post('/:owner/:repo/documents/register', async (req, res) => {
 });
 
 /**
- * POST /api/repositories/:owner/:repo/documents/:documentId/save
+ * POST /api/repositories/:owner/:repo/documents/save
  * Manually trigger an immediate save to GitHub
+ * Body: { documentId: string }
  */
-router.post('/:owner/:repo/documents/:documentId/save', async (req, res) => {
+router.post('/:owner/:repo/documents/save', async (req, res) => {
   try {
-    const { owner, repo, documentId } = req.params;
+    const { owner, repo } = req.params;
+    const { documentId } = req.body;
     const user = req.user as SessionUser;
+
+    if (!documentId) {
+      return res.status(400).json({ error: 'Missing required field: documentId' });
+    }
 
     console.log('[SAVE] Manual save triggered:', { owner, repo, documentId, userId: user.id });
 
