@@ -29,12 +29,14 @@
 - All 238 frontend unit tests pass
 - TypeScript type checking passes
 - Backend `comment-file.service.test.ts` passes (9 tests)
+- Backend `comment.routes.test.ts` passes (6 tests) - *New integration test added*
 
 ### Learnings for future iterations
 - The comment system architecture uses flat arrays for replies (no nested parent_id) - this is intentional to prevent deep nesting
 - Comment sidebar has an overlay backdrop (`comment-sidebar-backdrop`) that intercepts clicks on elements behind it
 - E2E mocks in `github-api.mock.ts` work differently than real backend - mocks search all comments by ID, backend requires path/repo info
 - When testing sidebar toggle, use the close button inside sidebar instead of the toggle button
+- **Testing:** When testing API routes that use `passport` and `redis`, it's critical to mock `server.js` exports and use `unstable_mockModule` for ESM modules to avoid starting the real server and connecting to Redis during unit/integration tests.
 
 ---
 
