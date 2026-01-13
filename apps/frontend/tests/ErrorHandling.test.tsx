@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { EditorLayout } from '../src/components/EditorLayout';
+
+// Helper to wrap component in MemoryRouter for useNavigate hook
+const renderWithRouter = (ui: React.ReactElement) => {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+};
 
 // Mock react-resizable-panels to avoid test environment issues
 vi.mock('react-resizable-panels', () => ({
@@ -87,7 +93,7 @@ describe('Error Handling in EditorLayout', () => {
       reconnectAttempts: 0,
     });
 
-    const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     expect(screen.queryByText(/Connection error/i)).not.toBeInTheDocument();
     expect(container.querySelector('.error-banner')).not.toBeInTheDocument();
@@ -104,7 +110,7 @@ describe('Error Handling in EditorLayout', () => {
       reconnectAttempts: 2,
     });
 
-    const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     expect(screen.getByText('Connection error: Network failure')).toBeInTheDocument();
     // Error banner uses FontAwesome icon, not emoji
@@ -123,7 +129,7 @@ describe('Error Handling in EditorLayout', () => {
       reconnectAttempts: 1,
     });
 
-    const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     const errorBanner = container.querySelector('.error-banner');
     expect(errorBanner).toBeInTheDocument();
@@ -149,7 +155,7 @@ describe('Error Handling in EditorLayout', () => {
       reconnectAttempts: 0,
     });
 
-    render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     expect(screen.queryByText(/Reconnecting/i)).not.toBeInTheDocument();
   });
@@ -165,7 +171,7 @@ describe('Error Handling in EditorLayout', () => {
       reconnectAttempts: 3,
     });
 
-    render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     // Reconnect info is now part of ConnectionStatus component
     expect(screen.getByText(/Reconnecting.*attempt 3/)).toBeInTheDocument();
@@ -182,7 +188,7 @@ describe('Error Handling in EditorLayout', () => {
       reconnectAttempts: 0,
     });
 
-    render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     // On first attempt, shows "Connecting to server..." not "Reconnecting..."
     expect(screen.queryByText(/Reconnecting/i)).not.toBeInTheDocument();
@@ -200,7 +206,7 @@ describe('Error Handling in EditorLayout', () => {
       reconnectAttempts: 5,
     });
 
-    render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     expect(screen.getByText(/Reconnecting.*attempt 5/)).toBeInTheDocument();
   });
@@ -216,7 +222,7 @@ describe('Error Handling in EditorLayout', () => {
       reconnectAttempts: 2,
     });
 
-    render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     await waitFor(() => {
       expect(screen.getByText('Connection error: Server unavailable')).toBeInTheDocument();
@@ -236,7 +242,7 @@ describe('Error Handling in EditorLayout', () => {
       reconnectAttempts: 1,
     });
 
-    const { rerender } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { rerender } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     expect(screen.getByText('Connection error: Failed')).toBeInTheDocument();
 
@@ -251,7 +257,7 @@ describe('Error Handling in EditorLayout', () => {
       reconnectAttempts: 0,
     });
 
-    rerender(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    rerender(<MemoryRouter><EditorLayout userName="TestUser" documentId="test-doc" /></MemoryRouter>);
 
     expect(screen.queryByText('Connection error: Failed')).not.toBeInTheDocument();
   });
@@ -268,7 +274,7 @@ describe('Error Handling in EditorLayout', () => {
       reconnectAttempts: 4,
     });
 
-    const { rerender } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { rerender } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     expect(screen.getByText(/Reconnecting.*attempt 4/)).toBeInTheDocument();
 
@@ -283,7 +289,7 @@ describe('Error Handling in EditorLayout', () => {
       reconnectAttempts: 0,
     });
 
-    rerender(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    rerender(<MemoryRouter><EditorLayout userName="TestUser" documentId="test-doc" /></MemoryRouter>);
 
     expect(screen.queryByText(/Reconnecting/i)).not.toBeInTheDocument();
   });
@@ -306,7 +312,7 @@ describe('Error Handling in EditorLayout', () => {
         reconnectAttempts: 1,
       });
 
-      const { unmount } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+      const { unmount } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
       expect(screen.getByText(errorMsg)).toBeInTheDocument();
 

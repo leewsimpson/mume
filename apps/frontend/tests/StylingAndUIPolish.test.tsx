@@ -1,6 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { EditorLayout } from '../src/components/EditorLayout';
+
+// Helper to wrap component in MemoryRouter for useNavigate hook
+const renderWithRouter = (ui: React.ReactElement) => {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+};
 
 // Mock react-resizable-panels to avoid test environment issues
 vi.mock('react-resizable-panels', () => ({
@@ -49,14 +55,14 @@ vi.mock('../src/components/ConnectionStatus', () => ({
 
 describe('US-014: Styling and UI Polish', () => {
   it('should have editor layout with proper structure', () => {
-    const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     const editorLayout = container.querySelector('.editor-layout');
     expect(editorLayout).toBeInTheDocument();
   });
 
   it('should have split-pane layout structure', () => {
-    const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     const editorContent = container.querySelector('.editor-content');
     expect(editorContent).toBeInTheDocument();
@@ -69,7 +75,7 @@ describe('US-014: Styling and UI Polish', () => {
   });
 
   it('should have visible divider between panes (resize handle)', () => {
-    const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     const editorPane = container.querySelector('.editor-pane');
     const previewPane = container.querySelector('.preview-pane');
@@ -83,7 +89,7 @@ describe('US-014: Styling and UI Polish', () => {
   });
 
   it('should have textarea with monospace font class', () => {
-    const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     const textarea = container.querySelector('.markdown-textarea');
     expect(textarea).toBeInTheDocument();
@@ -91,7 +97,7 @@ describe('US-014: Styling and UI Polish', () => {
   });
 
   it('should have preview pane with readable typography class', () => {
-    const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     const preview = container.querySelector('.preview-content');
     expect(preview).toBeInTheDocument();
@@ -99,7 +105,7 @@ describe('US-014: Styling and UI Polish', () => {
   });
 
   it('should have header with clear visual hierarchy', () => {
-    const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     const header = container.querySelector('.editor-header');
     expect(header).toBeInTheDocument();
@@ -114,7 +120,7 @@ describe('US-014: Styling and UI Polish', () => {
   });
 
   it('should have consistent CSS class naming convention', () => {
-    const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     // Check for consistent kebab-case naming
     expect(container.querySelector('.editor-layout')).toBeInTheDocument();
@@ -125,7 +131,7 @@ describe('US-014: Styling and UI Polish', () => {
   });
 
   it('should have proper layout structure (flexbox column)', () => {
-    const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     const editorLayout = container.querySelector('.editor-layout');
     expect(editorLayout).toBeInTheDocument();
@@ -133,7 +139,7 @@ describe('US-014: Styling and UI Polish', () => {
   });
 
   it('should have all required component containers', () => {
-    const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     // Verify all major containers exist
     expect(container.querySelector('.editor-layout')).toBeInTheDocument();
@@ -148,7 +154,7 @@ describe('US-014: Styling and UI Polish', () => {
   it('should render without any errors', () => {
     // This test verifies the component renders successfully
     expect(() => {
-      render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+      renderWithRouter(<EditorLayout userName="TestUser" documentId="test-doc" />);
     }).not.toThrow();
   });
 });

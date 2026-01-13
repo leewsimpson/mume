@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { EditorLayout } from '../src/components/EditorLayout';
+
+// Helper to wrap component in MemoryRouter for useNavigate hook
+const renderWithRouter = (ui: React.ReactElement) => {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+};
 
 // Mock react-resizable-panels to avoid test environment issues
 vi.mock('react-resizable-panels', () => ({
@@ -44,7 +50,7 @@ describe('EditorLayout Component', () => {
   });
 
   it('should render split-pane layout with editor and preview', () => {
-    render(<EditorLayout userName="Test User" documentId="test-doc" />);
+    renderWithRouter(<EditorLayout userName="Test User" documentId="test-doc" />);
 
     // Verify both panes are present
     expect(screen.getByTestId('markdown-editor')).toBeInTheDocument();
@@ -52,7 +58,7 @@ describe('EditorLayout Component', () => {
   });
 
   it('should render textarea for markdown editing in left pane', () => {
-    render(<EditorLayout userName="Test User" documentId="test-doc" />);
+    renderWithRouter(<EditorLayout userName="Test User" documentId="test-doc" />);
 
     const textarea = screen.getByTestId('markdown-editor');
     expect(textarea).toBeInTheDocument();
@@ -60,14 +66,14 @@ describe('EditorLayout Component', () => {
   });
 
   it('should render preview area in right pane', () => {
-    render(<EditorLayout userName="Test User" documentId="test-doc" />);
+    renderWithRouter(<EditorLayout userName="Test User" documentId="test-doc" />);
 
     const preview = screen.getByTestId('markdown-preview');
     expect(preview).toBeInTheDocument();
   });
 
   it('should render layout that fills viewport', () => {
-    const { container } = render(<EditorLayout userName="Test User" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="Test User" documentId="test-doc" />);
 
     const layout = container.querySelector('.editor-layout');
     expect(layout).toBeInTheDocument();
@@ -77,7 +83,7 @@ describe('EditorLayout Component', () => {
   });
 
   it('should render header with connection status component (hidden when connected)', () => {
-    const { container } = render(<EditorLayout userName="Test User" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="Test User" documentId="test-doc" />);
 
     // Connection status is hidden when connected - this is the expected behaviour
     // The component only shows when there's a connection problem
@@ -86,13 +92,13 @@ describe('EditorLayout Component', () => {
   });
 
   it('should render header with user presence component', () => {
-    render(<EditorLayout userName="Test User" documentId="test-doc" />);
+    renderWithRouter(<EditorLayout userName="Test User" documentId="test-doc" />);
 
     expect(screen.getByTestId('user-presence')).toBeInTheDocument();
   });
 
   it('should have 50/50 split layout structure', () => {
-    const { container } = render(<EditorLayout userName="Test User" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="Test User" documentId="test-doc" />);
 
     const editorContent = container.querySelector('.editor-content');
     expect(editorContent).toBeInTheDocument();
@@ -109,7 +115,7 @@ describe('EditorLayout Component', () => {
   });
 
   it('should have visible divider between panes', () => {
-    render(<EditorLayout userName="Test User" documentId="test-doc" />);
+    renderWithRouter(<EditorLayout userName="Test User" documentId="test-doc" />);
 
     // Verify the resize handle exists between panes
     const resizeHandle = screen.getByTestId('resize-handle');
@@ -118,7 +124,7 @@ describe('EditorLayout Component', () => {
   });
 
   it('should initialize with default welcome message', () => {
-    render(<EditorLayout userName="Test User" documentId="test-doc" />);
+    renderWithRouter(<EditorLayout userName="Test User" documentId="test-doc" />);
 
     const editor = screen.getByTestId('markdown-editor') as HTMLTextAreaElement;
     // The mock component receives initialContent which may be undefined (using default)
@@ -130,7 +136,7 @@ describe('EditorLayout Component', () => {
   it('should pass document ID and user name to Yjs provider', async () => {
     const { useYjsProvider } = await vi.importMock<typeof import('../src/hooks/useYjsProvider')>('../src/hooks/useYjsProvider');
 
-    render(<EditorLayout userName="Alice" documentId="doc123" />);
+    renderWithRouter(<EditorLayout userName="Alice" documentId="doc123" />);
 
     // useYjsProvider is called with documentId, userName, wsUrl, and optional avatarUrl/githubId
     // When avatarUrl and githubId are not provided to EditorLayout, they're passed as undefined
@@ -138,7 +144,7 @@ describe('EditorLayout Component', () => {
   });
 
   it('should render editor container with flex layout that fills parent', () => {
-    const { container } = render(<EditorLayout userName="Test User" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="Test User" documentId="test-doc" />);
 
     const editorPane = container.querySelector('.editor-pane');
     expect(editorPane).toBeInTheDocument();
@@ -152,7 +158,7 @@ describe('EditorLayout Component', () => {
   });
 
   it('should render resizable panels with Panel and Group components', () => {
-    const { container } = render(<EditorLayout userName="Test User" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="Test User" documentId="test-doc" />);
 
     // Verify Group component is rendered (mocked as .mock-group)
     const group = container.querySelector('.mock-group');
@@ -164,7 +170,7 @@ describe('EditorLayout Component', () => {
   });
 
   it('should render resize handle between editor and preview panels', () => {
-    render(<EditorLayout userName="Test User" documentId="test-doc" />);
+    renderWithRouter(<EditorLayout userName="Test User" documentId="test-doc" />);
 
     // Verify resize handle exists and has correct class
     const resizeHandle = screen.getByTestId('resize-handle');
@@ -173,7 +179,7 @@ describe('EditorLayout Component', () => {
   });
 
   it('should maintain panel structure for resizable layout', () => {
-    const { container } = render(<EditorLayout userName="Test User" documentId="test-doc" />);
+    const { container } = renderWithRouter(<EditorLayout userName="Test User" documentId="test-doc" />);
 
     // Verify the overall structure: editor-content contains mock-group with panels and separator
     const editorContent = container.querySelector('.editor-content');
