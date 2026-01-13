@@ -87,9 +87,8 @@ test.describe('US-MVP-002: Document Creation', () => {
     const folderSelector = modal.locator('[data-testid="folder-selector"]');
 
     if (await folderSelector.isVisible()) {
-      // Select a folder
-      await folderSelector.click();
-      await authenticatedPage.getByText('docs').click();
+      // Select a folder - use exact match to avoid ambiguity with nested folders
+      await folderSelector.getByRole('button', { name: '📁 docs', exact: true }).click();
 
       // Path preview should update
       await expect(modal.getByText(/docs\//)).toBeVisible();

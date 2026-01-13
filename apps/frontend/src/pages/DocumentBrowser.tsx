@@ -204,6 +204,7 @@ export function DocumentBrowser() {
       return (
         <div key={node.path}>
           <div
+            data-testid="tree-item tree-folder"
             onClick={() => toggleFolder(node.path)}
             style={{
               padding: '0.5rem',
@@ -240,6 +241,7 @@ export function DocumentBrowser() {
     // File node
     return (
       <div
+        data-testid="tree-item"
         key={node.path}
         onClick={() => handleFileClick(node.path)}
         style={{
@@ -334,7 +336,7 @@ export function DocumentBrowser() {
 
   const renderListView = () => {
     return (
-      <div>
+      <div data-testid="file-list">
         {paginatedFiles.map((file) => (
           <div
             key={file.path}
@@ -500,7 +502,7 @@ export function DocumentBrowser() {
           >
             ← Back to Repositories
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} data-testid="breadcrumb">
             <h1 style={{ fontSize: '1.5rem', fontWeight: 600, margin: 0 }}>
               {owner}/{repo}
             </h1>
@@ -550,6 +552,7 @@ export function DocumentBrowser() {
       >
         {loading && (
           <div
+            data-testid="loading-spinner"
             style={{
               textAlign: 'center',
               padding: '3rem',
@@ -650,44 +653,22 @@ export function DocumentBrowser() {
                 }}
               >
                 {/* View mode toggle */}
-                <div
+                <button
+                  data-testid="view-toggle"
+                  onClick={() => setViewMode(viewMode === 'tree' ? 'list' : 'tree')}
                   style={{
-                    display: 'flex',
-                    backgroundColor: '#0d1117',
-                    borderRadius: '6px',
+                    padding: '0.5rem 1rem',
+                    backgroundColor: '#21262d',
+                    color: '#c9d1d9',
                     border: '1px solid #30363d',
-                    overflow: 'hidden',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    fontWeight: 500,
                   }}
                 >
-                  <button
-                    onClick={() => setViewMode('tree')}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: viewMode === 'tree' ? '#21262d' : 'transparent',
-                      color: viewMode === 'tree' ? '#c9d1d9' : '#8b949e',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      fontWeight: viewMode === 'tree' ? 600 : 400,
-                    }}
-                  >
-                    Tree View
-                  </button>
-                  <button
-                    onClick={() => setViewMode('list')}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      backgroundColor: viewMode === 'list' ? '#21262d' : 'transparent',
-                      color: viewMode === 'list' ? '#c9d1d9' : '#8b949e',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '0.85rem',
-                      fontWeight: viewMode === 'list' ? 600 : 400,
-                    }}
-                  >
-                    List View
-                  </button>
-                </div>
+                  {viewMode === 'tree' ? 'List View' : 'Tree View'}
+                </button>
 
                 {/* Search input */}
                 <input
@@ -711,6 +692,7 @@ export function DocumentBrowser() {
                 {/* Sort dropdown (only show in list view) */}
                 {viewMode === 'list' && (
                   <select
+                    data-testid="sort-dropdown"
                     value={sortOption}
                     onChange={(e) => setSortOption(e.target.value as SortOption)}
                     style={{
@@ -733,7 +715,7 @@ export function DocumentBrowser() {
             </div>
 
             {viewMode === 'tree' ? (
-              <div style={{ padding: '0.5rem 0' }}>
+              <div style={{ padding: '0.5rem 0' }} data-testid="file-tree">
                 {searchQuery ? (
                   // Show filtered files in tree format when searching
                   filteredFiles.length > 0 ? (

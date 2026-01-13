@@ -71,7 +71,7 @@ export function UserPresence({ awareness }: UserPresenceProps) {
   const overflowCount = users.length - displayedUsers.length;
 
   return (
-    <div className="user-presence">
+    <div className="user-presence" data-testid="user-presence">
       <div className="user-list">
         {displayedUsers.map((user) => (
           <div
@@ -83,7 +83,9 @@ export function UserPresence({ awareness }: UserPresenceProps) {
               <img
                 src={user.avatarUrl}
                 alt={user.name}
+                title={user.isCurrentUser ? `${user.name} (You)` : user.name}
                 className="user-avatar"
+                data-testid="user-avatar"
                 style={{
                   width: '40px',
                   height: '40px',
@@ -103,6 +105,7 @@ export function UserPresence({ awareness }: UserPresenceProps) {
             ) : null}
             <span
               className="user-color-indicator"
+              data-testid="avatar-fallback"
               style={{
                 backgroundColor: user.color,
                 display: user.avatarUrl ? 'none' : 'inline-block',

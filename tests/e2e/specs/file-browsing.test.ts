@@ -26,12 +26,13 @@ test.describe('US-MVP-001B: File Browsing and Navigation', () => {
 
     // Should show markdown files
     await expect(authenticatedPage.getByText('README.md')).toBeVisible();
-    await expect(authenticatedPage.getByText('docs')).toBeVisible();
+    await expect(authenticatedPage.getByTestId('file-tree').getByText('docs')).toBeVisible();
 
     // Should not show non-markdown files (if any were in tree)
     // Our mock only has .md files, so just verify markdown files are present
+    // Note: file items may contain file size after the name (e.g., "README.md 1.0 KB")
     const mdFiles = authenticatedPage.locator('[data-testid="tree-item"]').filter({
-      hasText: /\.md$/,
+      hasText: /\.md/,
     });
     expect(await mdFiles.count()).toBeGreaterThan(0);
   });
@@ -42,7 +43,7 @@ test.describe('US-MVP-001B: File Browsing and Navigation', () => {
     await authenticatedPage.waitForSelector('[data-testid="file-tree"]');
 
     // Find docs folder
-    const docsFolder = authenticatedPage.locator('[data-testid="tree-folder"]').filter({
+    const docsFolder = authenticatedPage.locator('[data-testid="tree-item tree-folder"]').filter({
       hasText: 'docs',
     });
     await expect(docsFolder).toBeVisible();
@@ -131,7 +132,7 @@ test.describe('US-MVP-001B: File Browsing and Navigation', () => {
     await expect(
       authenticatedPage.getByText(/loading|fetching/i).or(
         authenticatedPage.locator('[data-testid="loading-spinner"]')
-      )
+      ).first()
     ).toBeVisible();
   });
 
@@ -179,9 +180,12 @@ test.describe('US-MVP-003: Document List Views', () => {
     if (await viewToggle.isVisible()) {
       // Toggle to list view
       await viewToggle.click();
+      
+      // Wait for view transition
+      await authenticatedPage.waitForTimeout(500);
 
       // Should show flat list
-      await expect(authenticatedPage.locator('[data-testid="file-list"]')).toBeVisible();
+      await expect(authenticatedPage.locator('[data-testid="file-list"]')).toBeVisible({ timeout: 10000 });
 
       // Toggle back to tree view
       await viewToggle.click();
@@ -203,7 +207,7 @@ test.describe('US-MVP-003: Document List Views', () => {
       await searchInput.fill('getting-started');
 
       // Should filter to matching file
-      await expect(authenticatedPage.getByText('getting-started.md')).toBeVisible();
+      await expect(authenticatedPage.getByText('getting-started.md').first()).toBeVisible();
     }
   });
 

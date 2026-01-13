@@ -25,6 +25,7 @@ export function CreateDocumentModal({
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [inputMode, setInputMode] = useState<'picker' | 'text'>('picker');
+  const [showValidation, setShowValidation] = useState(false);
 
   // Extract all folder paths from tree structure
   const folderPaths = useMemo(() => {
@@ -112,19 +113,30 @@ export function CreateDocumentModal({
   const handleFilenameChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFilename(e.target.value);
     setError(null);
+    // Reset validation when user types
+    if (showValidation) {
+      setShowValidation(false);
+    }
   };
 
   const handleFolderPathChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFolderPath(e.target.value);
     setError(null);
+    // Reset validation when user types
+    if (showValidation) {
+      setShowValidation(false);
+    }
   };
 
   const handleSelectFolder = (path: string) => {
     setFolderPath(path);
-    setInputMode('text');
+    setError(null);
   };
 
   const handleCreate = async () => {
+    // Show validation errors when user attempts to create
+    setShowValidation(true);
+    
     if (validationError) {
       setError(validationError);
       return;
@@ -139,6 +151,7 @@ export function CreateDocumentModal({
       setFilename('');
       setFolderPath('');
       setInputMode('picker');
+      setShowValidation(false);
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create document');
@@ -153,6 +166,7 @@ export function CreateDocumentModal({
       setFolderPath('');
       setError(null);
       setInputMode('picker');
+      setShowValidation(false);
       onClose();
     }
   };
@@ -160,7 +174,7 @@ export function CreateDocumentModal({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={handleClose}>
+    <div className="modal-overlay" data-testid="create-document-modal" onClick={handleClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <h2>Create New Document</h2>
@@ -178,7 +192,7 @@ export function CreateDocumentModal({
               type="text"
               value={filename}
               onChange={handleFilenameChange}
-              placeholder="document.md"
+              placeholder="Enter filename (e.g., document.md)"
               disabled={isCreating}
               autoFocus
             />
@@ -211,7 +225,7 @@ export function CreateDocumentModal({
             </div>
 
             {inputMode === 'picker' ? (
-              <div className="folder-picker">
+              <div className="folder-picker" data-testid="folder-selector">
                 <button
                   type="button"
                   className={`folder-item ${folderPath === '' ? 'selected' : ''}`}
@@ -242,6 +256,7 @@ export function CreateDocumentModal({
                   placeholder="docs/architecture"
                   disabled={isCreating}
                   list="folder-suggestions"
+                  data-testid="folder-path-input"
                 />
                 <datalist id="folder-suggestions">
                   {filteredPaths.map((path) => (
@@ -261,8 +276,10 @@ export function CreateDocumentModal({
             </div>
           )}
 
-          {/* Error Display */}
-          {error && <div className="error-message">{error}</div>}
+          {/* Error Display - show validation errors after submission attempt or submission errors */}
+          {((showValidation && validationError) || error) && (
+            <div className="error-message">{validationError || error}</div>
+          )}
         </div>
 
         <div className="modal-footer">
@@ -278,7 +295,7 @@ export function CreateDocumentModal({
             type="button"
             className="button button-primary"
             onClick={handleCreate}
-            disabled={isCreating || !!validationError}
+            disabled={isCreating}
           >
             {isCreating ? 'Creating...' : 'Create Document'}
           </button>

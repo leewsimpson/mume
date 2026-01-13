@@ -14,6 +14,11 @@ test.describe('US-MVP-010: User Presence', () => {
 
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
+    // Wait for WebSocket connection to be established
+    await expect(
+      authenticatedPage.locator('[data-testid="connection-status"]').getByText('Connected')
+    ).toBeVisible({ timeout: 15000 });
+
     // Should show presence indicator
     const presence = authenticatedPage.locator('[data-testid="user-presence"]');
     await expect(presence).toBeVisible();
@@ -61,7 +66,7 @@ test.describe('US-MVP-010: User Presence', () => {
 
     // First user should see second user
     const presence = authenticatedPage.locator('[data-testid="user-presence"]');
-    await expect(presence.getByText(secondUser.username)).toBeVisible({ timeout: 10000 });
+    await expect(presence.getByText(secondUser.username).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('should update when user leaves', async ({
@@ -122,17 +127,22 @@ test.describe('US-MVP-010: User Presence', () => {
     await authenticatedPage.goto(editorUrl);
 
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
+    
+    // Wait for WebSocket connection to establish so presence shows up
+    await expect(
+      authenticatedPage.locator('[data-testid="connection-status"]').getByText('Connected')
+    ).toBeVisible({ timeout: 15000 });
 
     const presence = authenticatedPage.locator('[data-testid="user-presence"]');
     const avatar = presence.locator('[data-testid="user-avatar"]').first();
 
-    if (await avatar.isVisible()) {
-      // Hover over avatar
-      await avatar.hover();
-
-      // Tooltip should appear
-      await expect(authenticatedPage.getByRole('tooltip')).toBeVisible({ timeout: 3000 });
-    }
+    // Wait for avatar to be visible (presence data arrives via WebSocket)
+    await expect(avatar).toBeVisible({ timeout: 10000 });
+    
+    // Check that avatar has a title attribute (native tooltip)
+    const title = await avatar.getAttribute('title');
+    expect(title).toBeTruthy();
+    expect(title).toMatch(/alice-test/i);
   });
 
   test('should show overflow indicator when many users', async ({ authenticatedPage }) => {

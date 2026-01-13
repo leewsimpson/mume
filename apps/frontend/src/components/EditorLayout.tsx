@@ -56,6 +56,9 @@ export function EditorLayout({
   // Ref for MarkdownEditor to enable scroll-to functionality
   const editorRef = useRef<MarkdownEditorRef>(null);
 
+  // Ref to track if Y.Text observer is initialized (persists across effect re-runs)
+  const isYtextInitializedRef = useRef(false);
+
   // Initialize Yjs provider with document ID from route and user name
   const { ydoc: _ydoc, ytext, provider: _provider, awareness, status, error, reconnectAttempts } = useYjsProvider(documentId, userName, 'ws://localhost:3000', avatarUrl, githubId);
 
@@ -69,15 +72,24 @@ export function EditorLayout({
       setMarkdown(ytextContent);
     }
 
+    // Mark as initialized after a short delay to avoid false positives from initial sync
+    const initTimer = setTimeout(() => {
+      isYtextInitializedRef.current = true;
+    }, 100);
+
     // Listen for Y.Text changes to update preview and track unsaved changes
     const observer = () => {
       setMarkdown(ytext.toString());
-      setHasUnsavedChanges(true);
+      // Only mark as unsaved if this is not the initial load
+      if (isYtextInitializedRef.current) {
+        setHasUnsavedChanges(true);
+      }
     };
 
     ytext.observe(observer);
 
     return () => {
+      clearTimeout(initTimer);
       ytext.unobserve(observer);
     };
   }, [ytext]);

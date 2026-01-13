@@ -91,6 +91,7 @@ export function CommentSidebar({
   const [replyingTo, setReplyingTo] = useState<number | null>(null);
   const [replyText, setReplyText] = useState('');
   const [deletingCommentId, setDeletingCommentId] = useState<number | null>(null);
+  const [deleteConfirmCommentId, setDeleteConfirmCommentId] = useState<number | null>(null);
 
   // Use controlled or uncontrolled mode for showResolved
   const showResolved = showResolvedProp ?? showResolvedInternal;
@@ -108,9 +109,8 @@ export function CommentSidebar({
       setLoading(true);
       setError(null);
 
-      const encodedPath = filePath.split('/').map(encodeURIComponent).join('/');
       const response = await fetch(
-        `http://localhost:3000/api/repositories/${owner}/${repo}/files/${encodedPath}/comments`,
+        `http://localhost:3000/api/repositories/${owner}/${repo}/comments?filePath=${encodeURIComponent(filePath)}`,
         {
           credentials: 'include',
         }
@@ -209,20 +209,17 @@ export function CommentSidebar({
     }
   };
 
-  const handleDeleteComment = async (commentId: number) => {
-    // Show confirmation dialog
-    const confirmed = window.confirm(
-      'Are you sure you want to delete this comment? This action cannot be undone.'
-    );
+  const handleDeleteClick = (commentId: number) => {
+    setDeleteConfirmCommentId(commentId);
+  };
 
-    if (!confirmed) {
-      return;
-    }
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmCommentId) return;
 
     try {
-      setDeletingCommentId(commentId);
+      setDeletingCommentId(deleteConfirmCommentId);
       const response = await fetch(
-        `http://localhost:3000/api/comments/${commentId}`,
+        `http://localhost:3000/api/comments/${deleteConfirmCommentId}`,
         {
           method: 'DELETE',
           credentials: 'include',
@@ -237,10 +234,15 @@ export function CommentSidebar({
       // Refresh comments
       await fetchComments();
       setDeletingCommentId(null);
+      setDeleteConfirmCommentId(null);
     } catch (err) {
       setDeletingCommentId(null);
       setError(err instanceof Error ? err.message : 'Failed to delete comment');
     }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteConfirmCommentId(null);
   };
 
   // Filter comments based on resolved status visibility
@@ -252,7 +254,14 @@ export function CommentSidebar({
 
   return (
     <div className="comment-sidebar-overlay">
-      <div className="comment-sidebar">
+      {/* Clickable background overlay to close sidebar */}
+      <div 
+        className="comment-sidebar-backdrop"
+        onClick={onClose}
+        aria-label="Close sidebar"
+      />
+      {/* Sidebar panel */}
+      <div className="comment-sidebar" data-testid="comment-sidebar">
         <div className="comment-sidebar-header">
           <div className="header-top">
             <h2>Comments</h2>
@@ -300,6 +309,7 @@ export function CommentSidebar({
                   key={comment.id}
                   className={`comment-thread ${comment.resolved ? 'resolved' : ''}`}
                   data-comment-id={comment.id}
+                  data-testid="comment-item"
                 >
                   <div className="comment-thread-header">
                     <div className="comment-header">
@@ -321,19 +331,6 @@ export function CommentSidebar({
                       {comment.resolved && (
                         <span className="resolved-badge">Resolved</span>
                       )}
-                      {currentUserId === comment.userId && (
-                        <button
-                          className="delete-button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteComment(comment.id);
-                          }}
-                          disabled={deletingCommentId === comment.id}
-                          title="Delete comment"
-                        >
-                          {deletingCommentId === comment.id ? '...' : '🗑️'}
-                        </button>
-                      )}
                       <button
                         className="resolve-button"
                         onClick={(e) => {
@@ -343,6 +340,20 @@ export function CommentSidebar({
                       >
                         {comment.resolved ? 'Unresolve' : 'Resolve'}
                       </button>
+                      {currentUserId === comment.userId && (
+                        <button
+                          className="delete-button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteClick(comment.id);
+                          }}
+                          disabled={deletingCommentId === comment.id}
+                          title="Delete comment"
+                          aria-label="Trash"
+                        >
+                          {deletingCommentId === comment.id ? '...' : '🗑️'}
+                        </button>
+                      )}
                     </div>
                   </div>
                   <div
@@ -409,7 +420,7 @@ export function CommentSidebar({
                             onClick={() => handleReplySubmit(comment.id)}
                             disabled={!replyText.trim()}
                           >
-                            Reply
+                            Submit
                           </button>
                         </div>
                       </div>
@@ -428,6 +439,31 @@ export function CommentSidebar({
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirmCommentId !== null && (
+        <div className="modal-overlay" onClick={handleCancelDelete}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <h3>Confirm Delete</h3>
+            <p>Are you sure you want to delete this comment? This action cannot be undone.</p>
+            <div className="modal-actions">
+              <button
+                className="button button-secondary"
+                onClick={handleCancelDelete}
+              >
+                Cancel
+              </button>
+              <button
+                className="button button-danger"
+                onClick={handleConfirmDelete}
+                disabled={deletingCommentId !== null}
+              >
+                {deletingCommentId !== null ? 'Deleting...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

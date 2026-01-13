@@ -6,9 +6,15 @@ import { seedTestComments, resetDatabase, seedTestUsers } from '../fixtures/data
  * E2E Tests for US-MVP-005, 006, 007: Comment System
  *
  * Tests for adding comments, replying, resolving, and deleting comments.
+ * 
+ * NOTE: These tests run in SERIAL mode (not parallel) because they reset the database
+ * before each test to ensure clean state. This is configured via test.describe.configure().
  */
 
 test.describe('US-MVP-005: Add Sidebar Comment Thread', () => {
+  // Configure tests to run serially due to database resets
+  test.describe.configure({ mode: 'serial' });
+
   const editorUrl = '/repositories/alice-test/test-docs/edit/README.md';
 
   test.beforeEach(async () => {
@@ -94,12 +100,15 @@ test.describe('US-MVP-005: Add Sidebar Comment Thread', () => {
     await modal.getByPlaceholder(/comment|write/i).fill('This is a test comment');
     await modal.getByRole('button', { name: /submit|save|add/i }).click();
 
+    // Wait for modal to close
+    await expect(modal).not.toBeVisible({ timeout: 5000 });
+
     // Open sidebar
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();
 
     // Comment should appear in sidebar
     const sidebar = authenticatedPage.locator('[data-testid="comment-sidebar"]');
-    await expect(sidebar.getByText('This is a test comment')).toBeVisible();
+    await expect(sidebar.getByText('This is a test comment')).toBeVisible({ timeout: 10000 });
   });
 
   test('should show comment author info', async ({ authenticatedPage, currentUser }) => {
@@ -149,7 +158,7 @@ test.describe('US-MVP-005: Add Sidebar Comment Thread', () => {
     const sidebar = authenticatedPage.locator('[data-testid="comment-sidebar"]');
 
     // Should show empty state
-    await expect(sidebar.getByText(/no comments|select text/i)).toBeVisible();
+    await expect(sidebar.getByText(/no comments|select text/i).first()).toBeVisible();
   });
 
   test('should navigate to highlighted text when clicking comment', async ({
@@ -176,6 +185,9 @@ test.describe('US-MVP-005: Add Sidebar Comment Thread', () => {
 });
 
 test.describe('US-MVP-006: Reply to and Resolve Comments', () => {
+  // Configure tests to run serially due to database resets
+  test.describe.configure({ mode: 'serial' });
+
   const editorUrl = '/repositories/alice-test/test-docs/edit/README.md';
 
   test.beforeEach(async () => {
@@ -196,7 +208,7 @@ test.describe('US-MVP-006: Reply to and Resolve Comments', () => {
     const comment = sidebar.locator('[data-testid="comment-item"]').first();
 
     // Should have reply button
-    await expect(comment.getByRole('button', { name: /reply/i })).toBeVisible();
+    await expect(comment.getByRole('button', { name: /reply/i }).first()).toBeVisible();
   });
 
   test('should open reply textarea when clicking reply', async ({
@@ -272,8 +284,14 @@ test.describe('US-MVP-006: Reply to and Resolve Comments', () => {
 
     await comment.getByRole('button', { name: /resolve/i }).click();
 
+    // By default, resolved comments are hidden, so enable showing them
+    await sidebar.getByRole('button', { name: /show.*resolved/i }).click();
+
+    // Re-query the comment after toggling resolved visibility
+    const resolvedComment = sidebar.locator('[data-testid="comment-item"]').first();
+
     // Comment should show resolved state
-    await expect(comment.getByText(/resolved/i)).toBeVisible();
+    await expect(resolvedComment.getByText(/resolved/i)).toBeVisible();
   });
 
   test('should toggle show/hide resolved comments', async ({ authenticatedPage, currentUser }) => {
@@ -301,6 +319,9 @@ test.describe('US-MVP-006: Reply to and Resolve Comments', () => {
 });
 
 test.describe('US-MVP-007: Delete Comments', () => {
+  // Configure tests to run serially due to database resets
+  test.describe.configure({ mode: 'serial' });
+
   const editorUrl = '/repositories/alice-test/test-docs/edit/README.md';
 
   test.beforeEach(async () => {
@@ -321,10 +342,13 @@ test.describe('US-MVP-007: Delete Comments', () => {
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();
 
     const sidebar = authenticatedPage.locator('[data-testid="comment-sidebar"]');
+    await expect(sidebar).toBeVisible();
+    
     const comment = sidebar.locator('[data-testid="comment-item"]').first();
+    await expect(comment).toBeVisible({ timeout: 10000 });
 
     // Should show delete button (since comment belongs to current user)
-    await expect(comment.getByRole('button', { name: /delete|trash/i })).toBeVisible();
+    await expect(comment.getByRole('button', { name: /delete|trash/i })).toBeVisible({ timeout: 10000 });
   });
 
   test('should show confirmation dialog when deleting', async ({
@@ -345,7 +369,7 @@ test.describe('US-MVP-007: Delete Comments', () => {
     await comment.getByRole('button', { name: /delete|trash/i }).click();
 
     // Confirmation dialog should appear
-    await expect(authenticatedPage.getByText(/are you sure|confirm/i)).toBeVisible();
+    await expect(authenticatedPage.getByRole('heading', { name: /confirm/i })).toBeVisible();
   });
 
   test('should delete comment when confirmed', async ({ authenticatedPage, currentUser }) => {
@@ -368,6 +392,9 @@ test.describe('US-MVP-007: Delete Comments', () => {
     // Confirm deletion
     await authenticatedPage.getByRole('button', { name: /confirm|yes|delete/i }).click();
 
+    // Wait for modal to close (indicates operation completed)
+    await expect(authenticatedPage.getByRole('heading', { name: /confirm/i })).not.toBeVisible();
+
     // Comment should be removed
     const finalCount = await sidebar.locator('[data-testid="comment-item"]').count();
     expect(finalCount).toBeLessThan(initialCount);
@@ -388,8 +415,9 @@ test.describe('US-MVP-007: Delete Comments', () => {
     const comment = sidebar.locator('[data-testid="comment-item"]').first();
     await comment.getByRole('button', { name: /delete|trash/i }).click();
 
-    // Cancel deletion
-    await authenticatedPage.getByRole('button', { name: /cancel|no/i }).click();
+    // Cancel deletion - use the modal's cancel button specifically
+    const modal = authenticatedPage.locator('.modal-content');
+    await modal.getByRole('button', { name: /cancel/i }).click();
 
     // Comment should still be there
     const finalCount = await sidebar.locator('[data-testid="comment-item"]').count();

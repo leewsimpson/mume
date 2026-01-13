@@ -21,9 +21,10 @@ const SYNC_INTERVAL_MS = 30000;
 const MAX_CONFLICT_RETRIES = 3;
 
 // Type for y-websocket docs map entry
+// Note: doc may be undefined if the document hasn't been fully initialized
 interface YjsDocEntry {
   name: string;
-  doc: Y.Doc;
+  doc?: Y.Doc;
 }
 
 /**
@@ -51,6 +52,11 @@ function hasChanges(ydoc: Y.Doc, lastSaved: Date): boolean {
   // Simple heuristic: if the document was modified in the last sync interval, consider it dirty
   // In a more robust implementation, we'd track the actual update state
   const ytext = ydoc.getText('content');
+  
+  if (!ytext) {
+    return false;
+  }
+  
   const content = ytext.toString();
 
   // If document has content and hasn't been saved recently, consider it dirty
@@ -82,7 +88,7 @@ export async function saveDocumentWithRetry(
 
   const docEntry = yjsDocs.get(documentId);
 
-  if (!docEntry) {
+  if (!docEntry || !docEntry.doc) {
     logger?.warn('Y.Doc not found in y-websocket docs map', { documentId });
     return false;
   }
@@ -251,7 +257,7 @@ export async function runGitHubSync(logger?: Logger): Promise<void> {
     // Get Y.Doc from y-websocket
     const docEntry = yjsDocs!.get(documentId);
 
-    if (!docEntry) {
+    if (!docEntry || !docEntry.doc) {
       return false;
     }
 
