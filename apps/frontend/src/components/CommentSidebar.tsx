@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import './CommentSidebar.css';
 
 interface User {
@@ -351,7 +353,7 @@ export function CommentSidebar({
                           title="Delete comment"
                           aria-label="Trash"
                         >
-                          {deletingCommentId === comment.id ? '...' : '🗑️'}
+                          {deletingCommentId === comment.id ? '...' : <FontAwesomeIcon icon={faTrash} />}
                         </button>
                       )}
                     </div>

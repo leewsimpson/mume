@@ -1,3 +1,6 @@
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSpinner, faFloppyDisk } from '@fortawesome/free-solid-svg-icons';
+
 interface SaveNowButtonProps {
   onSave: () => void;
   isSaving: boolean;
@@ -9,44 +12,15 @@ export function SaveNowButton({ onSave, isSaving, disabled }: SaveNowButtonProps
     <button
       onClick={onSave}
       disabled={disabled || isSaving}
-      title={disabled ? 'No unsaved changes' : 'Save now (Ctrl+S / Cmd+S)'}
+      title={isSaving ? 'Saving...' : disabled ? 'No unsaved changes' : 'Save now (Ctrl+S / Cmd+S)'}
+      className="btn btn--icon btn--ghost"
       style={{
-        padding: '0.5rem 1rem',
-        fontSize: '0.875rem',
-        fontWeight: 600,
-        color: disabled ? '#8b949e' : '#ffffff',
-        backgroundColor: disabled ? '#21262d' : '#238636',
-        border: 'none',
-        borderRadius: '6px',
+        opacity: disabled ? 0.4 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '0.5rem',
-        opacity: disabled ? 0.6 : 1,
-        transition: 'background-color 0.2s, opacity 0.2s',
-      }}
-      onMouseEnter={(e) => {
-        if (!disabled && !isSaving) {
-          e.currentTarget.style.backgroundColor = '#2ea043';
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!disabled && !isSaving) {
-          e.currentTarget.style.backgroundColor = '#238636';
-        }
+        color: disabled ? 'var(--color-text-muted)' : 'var(--color-text-primary)',
       }}
     >
-      {isSaving ? (
-        <>
-          <span>⏳</span>
-          <span>Saving...</span>
-        </>
-      ) : (
-        <>
-          <span>💾</span>
-          <span>Save Now</span>
-        </>
-      )}
+      <FontAwesomeIcon icon={isSaving ? faSpinner : faFloppyDisk} spin={isSaving} />
     </button>
   );
 }

@@ -6,10 +6,11 @@ const githubService = new GitHubService();
 
 // y-websocket stores docs in a map but doesn't export types for it
 // We need to access it dynamically
-let yjsDocs: Map<string, YjsDocEntry> | undefined;
+// Note: y-websocket stores Y.Doc instances directly in the map, not wrapped in objects
+let yjsDocs: Map<string, Y.Doc> | undefined;
 try {
   const yjsUtils = await import('y-websocket/bin/utils');
-  yjsDocs = (yjsUtils as {docs?: Map<string, YjsDocEntry>}).docs;
+  yjsDocs = (yjsUtils as {docs?: Map<string, Y.Doc>}).docs;
 } catch (err) {
   console.error('Failed to import y-websocket docs:', err);
 }
@@ -19,13 +20,6 @@ const SYNC_INTERVAL_MS = 30000;
 
 // Maximum retries for conflict resolution
 const MAX_CONFLICT_RETRIES = 3;
-
-// Type for y-websocket docs map entry
-// Note: doc may be undefined if the document hasn't been fully initialized
-interface YjsDocEntry {
-  name: string;
-  doc?: Y.Doc;
-}
 
 /**
  * Format commit message with timestamp and editor names
@@ -74,27 +68,49 @@ export async function saveDocumentWithRetry(
   documentId: string,
   logger?: Logger
 ): Promise<boolean> {
+  console.log('[SAVE_RETRY] Starting save for:', documentId);
+  
   const metadata = documentStateService.getDocument(documentId);
   if (!metadata) {
+    console.log('[SAVE_RETRY] ERROR: Document metadata not found for:', documentId);
     logger?.warn('Document metadata not found', { documentId });
     return false;
   }
 
+  console.log('[SAVE_RETRY] Metadata found:', { owner: metadata.owner, repo: metadata.repo, filePath: metadata.filePath });
+
   // Get Y.Doc from y-websocket's docs map
   if (!yjsDocs) {
+    console.log('[SAVE_RETRY] ERROR: y-websocket docs map not available');
     logger?.warn('y-websocket docs map not available', { documentId });
     return false;
   }
 
-  const docEntry = yjsDocs.get(documentId);
+  console.log('[SAVE_RETRY] y-websocket docs map size:', yjsDocs.size);
 
-  if (!docEntry || !docEntry.doc) {
-    logger?.warn('Y.Doc not found in y-websocket docs map', { documentId });
+  // Get Y.Doc from map (y-websocket stores Y.Doc instances directly)
+  let ydoc = yjsDocs.get(documentId);
+  let retries = 0;
+  const maxRetries = 10; // 10 retries = 5 seconds max wait
+  
+  // Wait for Y.Doc to be created (handle race condition)
+  while (!ydoc && retries < maxRetries) {
+    console.log('[SAVE_RETRY] Waiting for Y.Doc creation, attempt:', retries + 1);
+    await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
+    ydoc = yjsDocs.get(documentId);
+    retries++;
+  }
+
+  if (!ydoc) {
+    console.log('[SAVE_RETRY] ERROR: Y.Doc not found after waiting.');
+    console.log('[SAVE_RETRY] Available doc IDs:', Array.from(yjsDocs.keys()));
+    logger?.warn('Y.Doc not found in y-websocket docs map after retries', { documentId, retries });
     return false;
   }
 
+  console.log('[SAVE_RETRY] Y.Doc found, proceeding with save');
+
   const { owner, repo, filePath, sha, token, editors } = metadata;
-  const ydoc = docEntry.doc;
 
   // Get current content from Yjs document
   const ytext = ydoc.getText('content');
@@ -254,15 +270,15 @@ export async function runGitHubSync(logger?: Logger): Promise<void> {
       return false;
     }
 
-    // Get Y.Doc from y-websocket
-    const docEntry = yjsDocs!.get(documentId);
+    // Get Y.Doc from y-websocket (stored directly as Y.Doc)
+    const ydoc = yjsDocs!.get(documentId);
 
-    if (!docEntry || !docEntry.doc) {
+    if (!ydoc) {
       return false;
     }
 
     // Check if document has changes
-    return hasChanges(docEntry.doc, metadata.lastSaved);
+    return hasChanges(ydoc, metadata.lastSaved);
   });
 
   if (docsToSync.length === 0) {

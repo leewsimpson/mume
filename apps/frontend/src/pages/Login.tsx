@@ -1,11 +1,31 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
 export function Login() {
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     document.title = 'Sign In - Markdown Editor';
+    
+    // Check for error in URL query params
+    const params = new URLSearchParams(window.location.search);
+    const errorParam = params.get('error');
+    if (errorParam) {
+      setError(getErrorMessage(errorParam));
+    }
   }, []);
+
+  const getErrorMessage = (errorCode: string): string => {
+    switch (errorCode) {
+      case 'access_denied':
+        return 'Authentication was denied. Please try again.';
+      case 'server_error':
+        return 'An error occurred during authentication.';
+      default:
+        return 'Authentication failed. Please try again.';
+    }
+  };
 
   const handleGitHubLogin = () => {
     // Redirect to GitHub OAuth
@@ -33,8 +53,21 @@ export function Login() {
           marginBottom: '1rem',
           fontWeight: 600,
         }}>
-          Multi-User Markdown Editor
+          Sign In
         </h1>
+
+        {error && (
+          <div style={{
+            padding: '0.75rem',
+            marginBottom: '1rem',
+            backgroundColor: '#f85149',
+            color: '#ffffff',
+            borderRadius: '6px',
+            fontSize: '0.875rem',
+          }}>
+            {error}
+          </div>
+        )}
 
         <p style={{
           color: '#8b949e',

@@ -11,7 +11,7 @@ interface MarkdownPreviewProps {
  */
 export function MarkdownPreview({ content }: MarkdownPreviewProps) {
   return (
-    <div className="preview-content">
+    <div className="preview-content" data-testid="markdown-preview">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>
         {content}
       </ReactMarkdown>

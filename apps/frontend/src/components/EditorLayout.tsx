@@ -10,6 +10,8 @@ import { SaveNowButton } from './SaveNowButton';
 import { CommentSidebar, type Comment } from './CommentSidebar';
 import { AddCommentModal } from './AddCommentModal';
 import type { CommentRange } from './CommentHighlights';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faComments, faExclamationTriangle, faFileAlt } from '@fortawesome/free-solid-svg-icons';
 
 interface EditorLayoutProps {
   userName: string;
@@ -99,9 +101,8 @@ export function EditorLayout({
     if (!owner || !repo || !filePath) return;
 
     try {
-      const encodedPath = filePath.split('/').map(encodeURIComponent).join('/');
       const response = await fetch(
-        `http://localhost:3000/api/repositories/${owner}/${repo}/files/${encodedPath}/comments`,
+        `http://localhost:3000/api/repositories/${owner}/${repo}/comments?filePath=${encodeURIComponent(filePath)}`,
         { credentials: 'include' }
       );
 
@@ -156,7 +157,8 @@ export function EditorLayout({
       );
 
       if (!response.ok) {
-        throw new Error('Failed to save');
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `Save failed with status ${response.status}`);
       }
 
       const result = await response.json();
@@ -171,6 +173,7 @@ export function EditorLayout({
         }, 2000);
       } else {
         setSaveStatus('error');
+        console.error('Save failed:', result.error);
       }
     } catch (error) {
       console.error('Save error:', error);
@@ -270,36 +273,54 @@ export function EditorLayout({
     setIsSidebarOpen(!isSidebarOpen);
   };
 
+  // Extract filename from path
+  const fileName = filePath?.split('/').pop() || documentId;
+  const folderPath = filePath?.includes('/') 
+    ? filePath.substring(0, filePath.lastIndexOf('/'))
+    : null;
+
   return (
     <div className="editor-layout">
       <div className="editor-header">
-        <ConnectionStatus status={status} />
-        <SaveStatus
-          status={saveStatus}
-          message={saveStatus === 'idle' ? 'Auto-save enabled (30s)' : undefined}
-        />
-        <SaveNowButton
-          onSave={handleSaveNow}
-          isSaving={isSaving}
-          disabled={!hasUnsavedChanges}
-        />
-        <button
-          className="comments-toggle-button"
-          onClick={toggleSidebar}
-          title="Toggle comments"
-        >
-          💬 Comments
-        </button>
-        {status === 'connecting' && reconnectAttempts > 0 && (
-          <div className="reconnect-info">
-            Reconnecting... (attempt {reconnectAttempts})
+        <div className="editor-header__left">
+          <ConnectionStatus status={status} />
+          <div className="editor-header__doc">
+            <FontAwesomeIcon icon={faFileAlt} className="editor-header__doc-icon" />
+            <span className="editor-header__doc-name">{fileName}</span>
+            {folderPath && (
+              <span className="editor-header__doc-path">{folderPath}/</span>
+            )}
           </div>
-        )}
-        <UserPresence awareness={awareness} />
+          {status === 'connecting' && reconnectAttempts > 0 && (
+            <span className="reconnect-info">
+              Reconnecting... ({reconnectAttempts})
+            </span>
+          )}
+          {(saveStatus === 'saving' || saveStatus === 'saved' || saveStatus === 'error') && (
+            <SaveStatus status={saveStatus} />
+          )}
+        </div>
+        <div className="editor-header__right">
+          <SaveNowButton
+            onSave={handleSaveNow}
+            isSaving={isSaving}
+            disabled={!hasUnsavedChanges}
+          />
+          <button
+            className="btn btn--icon btn--ghost"
+            onClick={toggleSidebar}
+            title="Toggle comments"
+          >
+            <FontAwesomeIcon icon={faComments} />
+          </button>
+          <UserPresence awareness={awareness} />
+        </div>
       </div>
       {error && (
         <div className="error-banner">
-          <span className="error-icon">⚠️</span>
+          <span className="error-icon">
+            <FontAwesomeIcon icon={faExclamationTriangle} />
+          </span>
           <span className="error-message">{error}</span>
         </div>
       )}

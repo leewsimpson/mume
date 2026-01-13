@@ -22,12 +22,16 @@ router.get('/', async (req, res) => {
     const user = req.user as SessionUser;
     const token = res.locals.githubToken as string;
 
+    console.log('[REPO] Fetching repositories for user:', user.username, 'token exists:', !!token);
+
     req.logger?.info('Fetching user repositories', {
       userId: user.id,
       operation: 'listRepositories',
     });
 
     const repositories = await githubService.listUserRepositories(token, req.logger);
+    
+    console.log('[REPO] GitHub API returned', repositories.length, 'repositories');
 
     req.logger?.info('Successfully fetched repositories', {
       userId: user.id,
@@ -294,6 +298,8 @@ router.post('/:owner/:repo/documents/:documentId/save', async (req, res) => {
     const { owner, repo, documentId } = req.params;
     const user = req.user as SessionUser;
 
+    console.log('[SAVE] Manual save triggered:', { owner, repo, documentId, userId: user.id });
+
     req.logger?.info('Manual save triggered', {
       userId: user.id,
       owner,
@@ -305,8 +311,12 @@ router.post('/:owner/:repo/documents/:documentId/save', async (req, res) => {
     // Import the save function dynamically to avoid circular dependencies
     const { saveDocumentWithRetry } = await import('../jobs/githubSync.job.js');
 
+    console.log('[SAVE] Calling saveDocumentWithRetry for:', documentId);
+
     // Trigger immediate save
     const success = await saveDocumentWithRetry(documentId, req.logger);
+    
+    console.log('[SAVE] Save result:', success);
 
     if (success) {
       req.logger?.info('Manual save succeeded', {
@@ -325,6 +335,7 @@ router.post('/:owner/:repo/documents/:documentId/save', async (req, res) => {
         lastSaved: metadata?.lastSaved,
       });
     } else {
+      console.log('[SAVE] Save failed - returning 500');
       req.logger?.warn('Manual save failed', {
         userId: user.id,
         documentId,
@@ -333,10 +344,11 @@ router.post('/:owner/:repo/documents/:documentId/save', async (req, res) => {
 
       res.status(500).json({
         success: false,
-        error: 'Failed to save changes to GitHub',
+        error: 'Document not ready for saving. Please wait a moment and try again.',
       });
     }
   } catch (error) {
+    console.error('[SAVE ERROR]', error);
     req.logger?.error(
       'Manual save error',
       error instanceof Error ? error : new Error(String(error)),
@@ -357,17 +369,25 @@ router.post('/:owner/:repo/documents/:documentId/save', async (req, res) => {
 });
 
 /**
- * GET /api/repositories/:owner/:repo/files/:filePath/comments
+ * GET /api/repositories/:owner/:repo/comments
  * Get all comments for a specific document
- * Note: Uses wildcard to match file paths - must be defined BEFORE the wildcard file route
+ * Query parameter: filePath (e.g., README.md or docs/guide.md)
  */
-router.get('/:owner/:repo/files/*/comments', async (req, res) => {
+router.get('/:owner/:repo/comments', async (req, res) => {
   try {
     const { owner, repo } = req.params;
-    const filePath = (req.params as Record<string, string>)['0'];
+    const filePath = req.query.filePath as string;
+
+    req.logger?.info('Fetching comments', {
+      owner,
+      repo,
+      filePath,
+      query: req.query,
+      operation: 'fetch_comments_request'
+    });
 
     if (!filePath) {
-      return res.status(400).json({ error: 'File path is required' });
+      return res.status(400).json({ error: 'File path query parameter is required' });
     }
 
     // Fetch comments with user information

@@ -3,6 +3,8 @@ import * as Y from 'yjs';
 import type { Awareness } from 'y-protocols/awareness';
 import { RemoteCursors } from './RemoteCursors';
 import { CommentHighlights, type CommentRange } from './CommentHighlights';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faCommentMedical } from '@fortawesome/free-solid-svg-icons';
 
 interface MarkdownEditorProps {
   ytext: Y.Text | null;
@@ -313,6 +315,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
         onKeyUp={handleSelectionChange}
         onClick={handleSelectionChange}
         placeholder="Type your markdown here..."
+        data-testid="markdown-editor"
       />
       <RemoteCursors awareness={awareness} textareaRef={textareaRef} />
 
@@ -338,7 +341,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorRef, MarkdownEditorProps>
           }}
           onClick={handleAddCommentClick}
         >
-          💬 Add Comment
+          <FontAwesomeIcon icon={faCommentMedical} style={{ marginRight: '0.5rem' }} />
+          Add Comment
         </button>
       )}
     </div>

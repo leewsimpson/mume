@@ -186,6 +186,7 @@ export function RemoteCursors({ awareness, textareaRef }: RemoteCursorsProps) {
             {/* Cursor indicator */}
             <div
               className="remote-cursor"
+              data-testid="remote-cursor"
               style={{
                 ...getCursorStyle(cursor),
                 borderLeft: `2px solid ${cursor.color}`,

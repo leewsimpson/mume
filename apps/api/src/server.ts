@@ -101,7 +101,7 @@ async function bootstrap() {
   });
 
   // Start server
-  server.listen(parseInt(PORT), () => {
+  server.listen(parseInt(PORT), '0.0.0.0', () => {
     console.log(`🚀 Server listening on port ${PORT}`);
     console.log(`📝 WebSocket endpoint: ws://localhost:${PORT}`);
     console.log(`🌐 CORS enabled for: ${FRONTEND_URL}`);

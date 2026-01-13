@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faLock, faSignOutAlt, faSearch, faBook, faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -192,45 +194,34 @@ export function RepositorySelector() {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#0d1117',
-      color: '#c9d1d9',
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
+      backgroundColor: 'var(--color-bg-primary)',
+      color: 'var(--color-text-primary)',
+      fontFamily: 'var(--font-family)',
     }}>
-      <header style={{
-        padding: '1rem 2rem',
-        borderBottom: '1px solid #30363d',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-      }}>
-        <h1 style={{ fontSize: '1.5rem', fontWeight: 600 }}>
-          Select Repository
-        </h1>
+      <header className="app-header">
+        <div className="app-header__left">
+          <FontAwesomeIcon icon={faBook} style={{ fontSize: '1.25rem', color: 'var(--color-text-link)' }} />
+          <h1 className="app-header__title">
+            Select Repository
+          </h1>
+        </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          {user?.avatarUrl && (
-            <img
-              src={user.avatarUrl}
-              alt={user.username}
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-              }}
-            />
-          )}
-          <span>{user?.username}</span>
+        <div className="app-header__right">
+          <div className="user-menu">
+            {user?.avatarUrl && (
+              <img
+                src={user.avatarUrl}
+                alt={user.username}
+                className="user-avatar"
+              />
+            )}
+            <span className="user-menu__name">{user?.username}</span>
+          </div>
           <button
             onClick={handleLogout}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#21262d',
-              color: '#c9d1d9',
-              border: '1px solid #30363d',
-              borderRadius: '6px',
-              cursor: 'pointer',
-            }}
+            className="btn btn--secondary"
           >
+            <FontAwesomeIcon icon={faSignOutAlt} />
             Logout
           </button>
         </div>
@@ -242,7 +233,18 @@ export function RepositorySelector() {
         padding: '2rem',
       }}>
         {/* Search bar */}
-        <div style={{ marginBottom: '1.5rem' }}>
+        <div style={{ marginBottom: 'var(--space-5)', position: 'relative' }}>
+          <FontAwesomeIcon 
+            icon={faSearch} 
+            style={{ 
+              position: 'absolute', 
+              left: 'var(--space-4)', 
+              top: '50%', 
+              transform: 'translateY(-50%)',
+              color: 'var(--color-text-muted)',
+              fontSize: '0.875rem',
+            }} 
+          />
           <input
             type="text"
             placeholder="Search repositories..."
@@ -250,16 +252,24 @@ export function RepositorySelector() {
             onChange={(e) => setSearchQuery(e.target.value)}
             style={{
               width: '100%',
-              padding: '0.75rem 1rem',
-              backgroundColor: '#0d1117',
-              color: '#c9d1d9',
-              border: '1px solid #30363d',
-              borderRadius: '6px',
-              fontSize: '14px',
+              padding: 'var(--space-3) var(--space-4)',
+              paddingLeft: '2.5rem',
+              backgroundColor: 'var(--color-bg-secondary)',
+              color: 'var(--color-text-primary)',
+              border: '1px solid var(--color-border-default)',
+              borderRadius: 'var(--radius-md)',
+              fontSize: '0.875rem',
               outline: 'none',
+              transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
             }}
-            onFocus={(e) => e.target.style.borderColor = '#58a6ff'}
-            onBlur={(e) => e.target.style.borderColor = '#30363d'}
+            onFocus={(e) => {
+              e.target.style.borderColor = 'var(--color-accent-emphasis)';
+              e.target.style.boxShadow = '0 0 0 3px rgba(31, 111, 235, 0.3)';
+            }}
+            onBlur={(e) => {
+              e.target.style.borderColor = 'var(--color-border-default)';
+              e.target.style.boxShadow = 'none';
+            }}
           />
         </div>
 
@@ -307,10 +317,11 @@ export function RepositorySelector() {
               Showing {startIndex + 1}-{Math.min(endIndex, filteredRepos.length)} of {filteredRepos.length} repositories
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            <div data-testid="repository-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               {currentRepos.map((repo) => (
                 <div
                   key={repo.id}
+                  data-testid="repository-item"
                   onClick={() => handleSelectRepository(repo)}
                   style={{
                     padding: '1.25rem',
@@ -332,7 +343,7 @@ export function RepositorySelector() {
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
                     <img
                       src={repo.owner.avatar_url}
-                      alt={repo.owner.login}
+                      alt={`${repo.owner.login} avatar`}
                       style={{
                         width: '48px',
                         height: '48px',
@@ -351,13 +362,17 @@ export function RepositorySelector() {
                           {repo.full_name}
                         </h3>
                         {repo.private && (
-                          <span style={{
+                          <span data-testid="private-indicator" style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
                             padding: '0.125rem 0.5rem',
                             fontSize: '0.75rem',
-                            color: '#8b949e',
-                            border: '1px solid #30363d',
-                            borderRadius: '12px',
+                            color: 'var(--color-text-secondary)',
+                            border: '1px solid var(--color-border-default)',
+                            borderRadius: 'var(--radius-full)',
                           }}>
+                            <FontAwesomeIcon icon={faLock} style={{ fontSize: '0.625rem' }} />
                             Private
                           </span>
                         )}
@@ -389,45 +404,39 @@ export function RepositorySelector() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div style={{
+              <div data-testid="pagination" style={{
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                gap: '0.5rem',
-                marginTop: '2rem',
+                gap: 'var(--space-3)',
+                marginTop: 'var(--space-6)',
               }}>
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   disabled={currentPage === 1}
+                  className={`btn ${currentPage === 1 ? 'btn--secondary' : 'btn--primary'}`}
                   style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: currentPage === 1 ? '#21262d' : '#238636',
-                    color: currentPage === 1 ? '#6e7681' : '#ffffff',
-                    border: '1px solid #30363d',
-                    borderRadius: '6px',
+                    opacity: currentPage === 1 ? 0.5 : 1,
                     cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                    fontSize: '0.9rem',
                   }}
                 >
+                  <FontAwesomeIcon icon={faChevronLeft} />
                   Previous
                 </button>
-                <span style={{ color: '#8b949e', fontSize: '0.9rem' }}>
+                <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.875rem', padding: '0 var(--space-2)' }}>
                   Page {currentPage} of {totalPages}
                 </span>
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   disabled={currentPage === totalPages}
+                  className={`btn ${currentPage === totalPages ? 'btn--secondary' : 'btn--primary'}`}
                   style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: currentPage === totalPages ? '#21262d' : '#238636',
-                    color: currentPage === totalPages ? '#6e7681' : '#ffffff',
-                    border: '1px solid #30363d',
-                    borderRadius: '6px',
+                    opacity: currentPage === totalPages ? 0.5 : 1,
                     cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-                    fontSize: '0.9rem',
                   }}
                 >
                   Next
+                  <FontAwesomeIcon icon={faChevronRight} />
                 </button>
               </div>
             )}

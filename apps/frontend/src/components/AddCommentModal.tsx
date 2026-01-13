@@ -57,7 +57,7 @@ export function AddCommentModal({
 
   return (
     <div className="add-comment-modal-overlay" onClick={handleCancel}>
-      <div className="add-comment-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="add-comment-modal" data-testid="comment-modal" onClick={(e) => e.stopPropagation()}>
         <div className="add-comment-modal-header">
           <h3>Add Comment</h3>
           <button className="close-button" onClick={handleCancel}>

@@ -237,6 +237,13 @@ export async function seedTestComments(
   const testPool = getPool();
   const commentIds: number[] = [];
 
+  // Verify user exists first
+  const userCheck = await testPool.query('SELECT id FROM users WHERE id = $1', [userId]);
+  if (userCheck.rows.length === 0) {
+    throw new Error(`User with id ${userId} does not exist in test database`);
+  }
+
+  // Sample comments for testing
   const comments = [
     { charStart: 10, charEnd: 50, text: 'This section needs clarification' },
     { charStart: 100, charEnd: 150, text: 'Great explanation here!' },

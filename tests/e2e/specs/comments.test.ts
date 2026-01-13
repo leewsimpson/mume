@@ -117,9 +117,22 @@ test.describe('US-MVP-005: Add Sidebar Comment Thread', () => {
     // Seed a comment first
     await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
 
-    // Reload to get comments
+    // Monitor network request to verify API endpoint is called correctly
+    const responsePromise = authenticatedPage.waitForResponse(
+      response => response.url().includes('/api/repositories/alice-test/test-docs/comments') 
+        && response.url().includes('filePath=README.md')
+        && response.request().method() === 'GET',
+      { timeout: 10000 }
+    );
+
+    // Reload to trigger comment fetch
     await authenticatedPage.reload();
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
+
+    // Verify the API call was successful
+    const response = await responsePromise;
+    expect(response.status()).toBe(200);
+    expect(response.url()).toContain('?filePath=README.md');
 
     // Open sidebar
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();

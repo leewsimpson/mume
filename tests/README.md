@@ -38,24 +38,56 @@ tests/
 
 ## Running Tests
 
+### Automated Test Runs (Recommended)
+
+The following commands automatically start and stop the test servers:
+
 ```bash
-# Run all tests
+# Run all tests (auto-starts servers)
 npm test
 
-# Run tests with UI
+# Run tests with UI (auto-starts servers)
 npm run test:ui
 
-# Run tests in headed mode (visible browser)
+# Run tests in headed mode (auto-starts servers)
 npm run test:headed
 
-# Run specific test file
-npx playwright test e2e/specs/auth-flow.unauth.test.ts
-
-# Debug mode
+# Debug mode (auto-starts servers)
 npm run test:debug
 
 # View test report
 npm run test:report
+```
+
+### Manual Server Management
+
+For development, you can manually control the test servers:
+
+```bash
+# Start test servers manually
+npm run start:servers
+
+# Run tests without auto-starting servers
+npm run test:manual
+
+# Stop test servers
+npm run stop:servers
+```
+
+### Running Specific Tests
+
+```bash
+# Make sure servers are running first
+npm run start:servers
+
+# Run specific test file
+npx playwright test e2e/specs/auth-flow.unauth.test.ts
+
+# Run API contract tests
+npx playwright test e2e/specs/api-contracts.test.ts
+
+# Stop servers when done
+npm run stop:servers
 ```
 
 ## Test Categories
@@ -81,6 +113,9 @@ npm run test:report
 ### User Presence (US-MVP-010, US-MVP-012)
 - `user-presence.test.ts` - Real-time presence and comment highlighting
 
+### API Contracts
+- `api-contracts.test.ts` - Verifies backend API endpoints match frontend expectations
+
 ## Mock Strategy
 
 ### GitHub OAuth (Mocked)
@@ -99,6 +134,38 @@ npm run test:report
 ### Redis (Real)
 - Uses real Redis via Docker
 - Session storage works normally
+
+## Test Parallelization Strategy
+
+### Parallel Execution (Default)
+Most test files run in parallel to maximize performance:
+- `repository-selection.test.ts` - Read-only repository browsing
+- `file-browsing.test.ts` - File tree navigation
+- `auth-flow.unauth.test.ts` - Authentication flows
+- `document-creation.test.ts` - Document creation (isolated operations)
+- `editor-autosave.test.ts` - Editor functionality
+- `user-presence.test.ts` - Real-time presence features
+
+These tests can run concurrently because they either:
+1. Only read data (no mutations)
+2. Create isolated data that doesn't conflict
+3. Use mocked GitHub API responses
+
+### Serial Execution (Explicit Configuration)
+Tests that reset the database run serially to avoid race conditions:
+- `comments.test.ts` - All describe blocks marked with `test.describe.configure({ mode: 'serial' })`
+
+Each describe block in `comments.test.ts` uses `beforeEach` to reset the database, which would cause conflicts if tests ran in parallel.
+
+### Worker Configuration
+- **Local development**: Uses 50% of CPU cores (`workers: '50%'`)
+- **CI**: Single worker (`workers: 1`) for stability
+
+### Best Practices
+1. **Prefer parallel**: Design tests to run in parallel when possible
+2. **Mark serial explicitly**: Use `test.describe.configure({ mode: 'serial' })` for tests that modify shared state
+3. **Isolate data**: Use unique identifiers or separate test users to avoid conflicts
+4. **Avoid global state**: Tests should not depend on execution order
 
 ## Environment Variables
 

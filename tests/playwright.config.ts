@@ -21,7 +21,8 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
 
   // Parallel workers
-  workers: process.env.CI ? 1 : undefined,
+  // Use 1 worker in CI, 50% of CPU cores locally (to leave resources for the app servers)
+  workers: process.env.CI ? 1 : '50%',
 
   // Reporter configuration
   reporter: [
@@ -82,7 +83,7 @@ export default defineConfig({
         storageState: '.auth/user.json',
       },
       dependencies: ['setup'],
-      testIgnore: /.*\.(setup|unauth)\.ts/,
+      testIgnore: /.*\.(setup|unauth\.test)\.ts/,
     },
   ],
 

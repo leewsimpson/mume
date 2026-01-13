@@ -5,6 +5,7 @@ import { TEST_REPOSITORIES } from '../mocks/github-api.mock.js';
  * E2E Tests for US-MVP-001A: Select GitHub repository to edit
  *
  * Tests the repository selection flow after authentication.
+ * These tests run in PARALLEL - they are read-only and do not modify database state.
  */
 
 test.describe('US-MVP-001A: Repository Selection', () => {
@@ -60,7 +61,7 @@ test.describe('US-MVP-001A: Repository Selection', () => {
     await expect(privateRepo).toBeVisible();
 
     // Should show private indicator
-    await expect(privateRepo.getByText(/private/i)).toBeVisible();
+    await expect(privateRepo.getByTestId('private-indicator')).toBeVisible();
   });
 
   test('should navigate to document browser when selecting repository', async ({
@@ -113,8 +114,9 @@ test.describe('US-MVP-001A: Repository Selection', () => {
   test('should display current user info in header', async ({ authenticatedPage, currentUser }) => {
     await authenticatedPage.goto('/repositories');
 
-    // Should show username in header
-    await expect(authenticatedPage.getByText(currentUser.username)).toBeVisible();
+    // Should show username in header (using locator to be specific)
+    const header = authenticatedPage.locator('header');
+    await expect(header.getByText(currentUser.username)).toBeVisible();
   });
 
   test('should handle empty repository list gracefully', async ({ authenticatedPage }) => {

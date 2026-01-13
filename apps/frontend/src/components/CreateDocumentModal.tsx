@@ -1,4 +1,6 @@
 import { useState, useMemo, ChangeEvent } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faFolder } from '@fortawesome/free-solid-svg-icons';
 
 interface TreeNode {
   name: string;
@@ -232,7 +234,8 @@ export function CreateDocumentModal({
                   onClick={() => handleSelectFolder('')}
                   disabled={isCreating}
                 >
-                  📁 (root)
+                  <FontAwesomeIcon icon={faFolder} style={{ marginRight: '0.5rem', color: 'var(--color-warning, #d29922)' }} />
+                  (root)
                 </button>
                 {folderPaths.slice(1).map((path) => (
                   <button
@@ -242,7 +245,8 @@ export function CreateDocumentModal({
                     onClick={() => handleSelectFolder(path)}
                     disabled={isCreating}
                   >
-                    📁 {path}
+                    <FontAwesomeIcon icon={faFolder} style={{ marginRight: '0.5rem', color: 'var(--color-warning, #d29922)' }} />
+                    {path}
                   </button>
                 ))}
               </div>

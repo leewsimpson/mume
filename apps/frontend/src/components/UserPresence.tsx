@@ -84,13 +84,14 @@ export function UserPresence({ awareness }: UserPresenceProps) {
                 src={user.avatarUrl}
                 alt={user.name}
                 title={user.isCurrentUser ? `${user.name} (You)` : user.name}
-                className="user-avatar"
+                className="user-avatar user-avatar--sm"
                 data-testid="user-avatar"
                 style={{
-                  width: '40px',
-                  height: '40px',
+                  width: '20px',
+                  height: '20px',
                   borderRadius: '50%',
-                  border: `3px solid ${user.color}`,
+                  border: `2px solid ${user.color}`,
+                  flexShrink: 0,
                 }}
                 onError={(e) => {
                   // Fallback to colored badge with initials

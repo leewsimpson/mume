@@ -3,14 +3,19 @@ interface ConnectionStatusProps {
 }
 
 export function ConnectionStatus({ status }: ConnectionStatusProps) {
+  const title = status === 'connected' 
+    ? 'Connected' 
+    : status === 'connecting' 
+    ? 'Connecting...' 
+    : 'Disconnected';
+
   return (
-    <div className="connection-status">
+    <div 
+      className="connection-status" 
+      data-testid="connection-status"
+      title={title}
+    >
       <span className={`status-indicator status-${status}`}></span>
-      <span className="status-text">
-        {status === 'connected' && 'Connected'}
-        {status === 'connecting' && 'Connecting...'}
-        {status === 'disconnected' && 'Disconnected'}
-      </span>
     </div>
   );
 }

@@ -109,8 +109,10 @@ export async function selectTextInEditor(
       if (editor) {
         editor.focus();
         editor.setSelectionRange(start, end);
-        // Dispatch selection change event
+        // Dispatch selection change events
         editor.dispatchEvent(new Event('select', { bubbles: true }));
+        editor.dispatchEvent(new Event('click', { bubbles: true }));
+        editor.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
       }
     },
     { selector: editorSelector, start: startOffset, end: endOffset }

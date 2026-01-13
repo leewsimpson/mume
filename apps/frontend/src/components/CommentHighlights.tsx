@@ -238,6 +238,8 @@ export function CommentHighlights({
       {highlights.map((highlight, index) => (
         <div
           key={`${highlight.commentId}-${index}`}
+          data-testid="comment-highlight"
+          data-resolved={highlight.resolved ? 'true' : 'false'}
           className={`comment-highlight ${highlight.isActive ? 'comment-highlight--active' : ''} ${highlight.resolved ? 'comment-highlight--resolved' : ''}`}
           style={{
             position: 'absolute',

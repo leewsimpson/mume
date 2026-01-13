@@ -32,7 +32,11 @@ Backend API server providing real-time collaborative markdown editing using Yjs 
    cp .env.example .env
    ```
 
-3. Start development server:
+3. Set up GitHub OAuth:
+   - See [SETUP_OAUTH.md](./SETUP_OAUTH.md) for detailed instructions
+   - Configure `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` in `.env`
+
+4. Start development server:
    ```bash
    npm run dev
    ```
@@ -46,6 +50,10 @@ See `.env.example` for required variables:
 - `PORT` - Server port (default: 3000)
 - `NODE_ENV` - Environment mode (development/production)
 - `FRONTEND_URL` - Frontend origin for CORS (default: http://localhost:5173)
+- `GITHUB_CLIENT_ID` - GitHub OAuth App Client ID (see [SETUP_OAUTH.md](./SETUP_OAUTH.md))
+- `GITHUB_CLIENT_SECRET` - GitHub OAuth App Client Secret (see [SETUP_OAUTH.md](./SETUP_OAUTH.md))
+- `SESSION_SECRET` - Session encryption secret (generate with `openssl rand -hex 32`)
+- `TOKEN_ENCRYPTION_KEY` - Token encryption key (generate with `openssl rand -hex 32`)
 
 ## Building
 
@@ -94,7 +102,7 @@ npm run test:watch
 - **WebSocket Server**: Integrated with Express HTTP server for Yjs synchronization
 - **Document Store**: In-memory Map storing Y.Doc instances by document ID
 - **CORS**: Configured to allow frontend origin during development
-- **No Authentication**: PoC implementation - authentication happens client-side via name prompt
+- **Authentication**: GitHub OAuth for user authentication (see [SETUP_OAUTH.md](./SETUP_OAUTH.md))
 
 ## Related Documentation
 

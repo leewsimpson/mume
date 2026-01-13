@@ -138,6 +138,17 @@ export class GitHubService {
     try {
       const octokit = this.createOctokit(token);
 
+      // First check what user/orgs we have access to
+      try {
+        const userInfo = await octokit.rest.users.getAuthenticated();
+        console.log('[GITHUB] Authenticated as:', userInfo.data.login);
+        
+        const orgsResponse = await octokit.rest.orgs.listForAuthenticatedUser();
+        console.log('[GITHUB] Organizations accessible:', orgsResponse.data.map(org => org.login));
+      } catch (err) {
+        console.log('[GITHUB] Error checking user/orgs:', err instanceof Error ? err.message : String(err));
+      }
+
       const repos = await this.retryWithBackoff(async () => {
         const response = await octokit.rest.repos.listForAuthenticatedUser({
           affiliation: 'owner,collaborator,organization_member',
@@ -147,10 +158,33 @@ export class GitHubService {
         return response.data as Repository[];
       }, logger);
 
+      console.log('[GITHUB] Raw API response - total repos:', repos.length);
+      if (repos.length > 0) {
+        console.log('[GITHUB] First repo sample:', {
+          name: repos[0]?.full_name,
+          permissions: repos[0]?.permissions,
+          private: repos[0]?.private
+        });
+      }
+
+      logger?.info('GitHub API returned repositories', {
+        operation: 'listUserRepositories',
+        totalRepos: repos.length,
+        sampleRepo: repos.length > 0 ? repos[0]?.full_name : 'none',
+        samplePermissions: repos.length > 0 ? repos[0]?.permissions : 'none',
+      });
+
       // Filter to only repos with push permission
       const writableRepos = repos.filter(
         (repo) => repo.permissions?.push === true
       );
+
+      logger?.info('Filtered to writable repositories', {
+        operation: 'listUserRepositories',
+        totalRepos: repos.length,
+        writableRepos: writableRepos.length,
+        filtered: repos.length - writableRepos.length,
+      });
 
       // Cache the result
       this.repoCache.set(cacheKey, {

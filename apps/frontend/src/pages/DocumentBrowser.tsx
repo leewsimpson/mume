@@ -1,6 +1,20 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { CreateDocumentModal } from '../components/CreateDocumentModal';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { 
+  faArrowLeft, 
+  faSignOutAlt, 
+  faPlus, 
+  faFolder, 
+  faFileAlt, 
+  faChevronRight, 
+  faChevronDown,
+  faList,
+  faFolderTree,
+  faSearch,
+  faChevronLeft
+} from '@fortawesome/free-solid-svg-icons';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -207,27 +221,34 @@ export function DocumentBrowser() {
             data-testid="tree-item tree-folder"
             onClick={() => toggleFolder(node.path)}
             style={{
-              padding: '0.5rem',
+              padding: 'var(--space-2)',
               paddingLeft,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem',
+              gap: 'var(--space-2)',
               backgroundColor: 'transparent',
-              transition: 'background-color 0.2s',
+              transition: 'background-color 0.15s ease',
+              borderRadius: 'var(--radius-sm)',
+              margin: '0 var(--space-2)',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#21262d';
+              e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
-            <span style={{ fontSize: '0.8rem', color: '#8b949e' }}>
-              {isExpanded ? '▼' : '▶'}
-            </span>
-            <span style={{ fontSize: '0.9rem' }}>📁</span>
-            <span style={{ fontSize: '0.9rem', color: '#c9d1d9' }}>{node.name}</span>
+            <FontAwesomeIcon 
+              icon={isExpanded ? faChevronDown : faChevronRight} 
+              className="tree-icon tree-icon--chevron"
+              style={{ fontSize: '0.625rem', width: '0.75rem' }}
+            />
+            <FontAwesomeIcon 
+              icon={faFolder} 
+              className="tree-icon tree-icon--folder"
+            />
+            <span style={{ fontSize: '0.875rem', color: 'var(--color-text-primary)' }}>{node.name}</span>
           </div>
           {isExpanded && node.children && (
             <div>
@@ -245,27 +266,32 @@ export function DocumentBrowser() {
         key={node.path}
         onClick={() => handleFileClick(node.path)}
         style={{
-          padding: '0.5rem',
+          padding: 'var(--space-2)',
           paddingLeft,
           cursor: 'pointer',
           display: 'flex',
           alignItems: 'center',
-          gap: '0.5rem',
+          gap: 'var(--space-2)',
           backgroundColor: 'transparent',
-          transition: 'background-color 0.2s',
+          transition: 'background-color 0.15s ease',
+          borderRadius: 'var(--radius-sm)',
+          margin: '0 var(--space-2)',
         }}
         onMouseEnter={(e) => {
-          e.currentTarget.style.backgroundColor = '#21262d';
+          e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)';
         }}
         onMouseLeave={(e) => {
           e.currentTarget.style.backgroundColor = 'transparent';
         }}
       >
-        <span style={{ fontSize: '0.8rem', color: '#8b949e', visibility: 'hidden' }}>▶</span>
-        <span style={{ fontSize: '0.9rem' }}>📄</span>
-        <span style={{ fontSize: '0.9rem', color: '#58a6ff' }}>{node.name}</span>
+        <span style={{ width: '0.75rem' }}></span>
+        <FontAwesomeIcon 
+          icon={faFileAlt} 
+          className="tree-icon tree-icon--file"
+        />
+        <span style={{ fontSize: '0.875rem', color: 'var(--color-text-link)' }}>{node.name}</span>
         {node.size !== undefined && (
-          <span style={{ fontSize: '0.75rem', color: '#8b949e', marginLeft: 'auto' }}>
+          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginLeft: 'auto' }}>
             {formatFileSize(node.size)}
           </span>
         )}
@@ -342,33 +368,37 @@ export function DocumentBrowser() {
             key={file.path}
             onClick={() => handleFileClick(file.path)}
             style={{
-              padding: '1rem',
+              padding: 'var(--space-4)',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '1rem',
-              borderBottom: '1px solid #21262d',
+              gap: 'var(--space-4)',
+              borderBottom: '1px solid var(--color-border-muted)',
               backgroundColor: 'transparent',
-              transition: 'background-color 0.2s',
+              transition: 'background-color 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#21262d';
+              e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'transparent';
             }}
           >
-            <span style={{ fontSize: '0.9rem' }}>📄</span>
+            <FontAwesomeIcon 
+              icon={faFileAlt} 
+              className="tree-icon tree-icon--file"
+              style={{ fontSize: '1rem' }}
+            />
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: '0.9rem', color: '#58a6ff', marginBottom: '0.25rem' }}>
+              <div style={{ fontSize: '0.875rem', color: 'var(--color-text-link)', marginBottom: 'var(--space-1)' }}>
                 {file.name}
               </div>
-              <div style={{ fontSize: '0.8rem', color: '#8b949e' }}>
+              <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)' }}>
                 {file.path}
               </div>
             </div>
             {file.size !== undefined && (
-              <span style={{ fontSize: '0.75rem', color: '#8b949e' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>
                 {formatFileSize(file.size)}
               </span>
             )}
@@ -377,9 +407,9 @@ export function DocumentBrowser() {
         {paginatedFiles.length === 0 && (
           <div
             style={{
-              padding: '2rem',
+              padding: 'var(--space-6)',
               textAlign: 'center',
-              color: '#8b949e',
+              color: 'var(--color-text-secondary)',
             }}
           >
             {searchQuery
@@ -400,43 +430,37 @@ export function DocumentBrowser() {
           display: 'flex',
           justifyContent: 'center',
           alignItems: 'center',
-          gap: '0.5rem',
-          padding: '1rem',
-          borderTop: '1px solid #30363d',
+          gap: 'var(--space-3)',
+          padding: 'var(--space-4)',
+          borderTop: '1px solid var(--color-border-default)',
         }}
       >
         <button
           onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
+          className="btn btn--secondary btn--sm"
           style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: currentPage === 1 ? '#161b22' : '#21262d',
-            color: currentPage === 1 ? '#6e7681' : '#c9d1d9',
-            border: '1px solid #30363d',
-            borderRadius: '6px',
+            opacity: currentPage === 1 ? 0.5 : 1,
             cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-            fontSize: '0.85rem',
           }}
         >
+          <FontAwesomeIcon icon={faChevronLeft} />
           Previous
         </button>
-        <span style={{ color: '#8b949e', fontSize: '0.85rem' }}>
+        <span style={{ color: 'var(--color-text-secondary)', fontSize: '0.8125rem' }}>
           Page {currentPage} of {totalPages}
         </span>
         <button
           onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
+          className="btn btn--secondary btn--sm"
           style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: currentPage === totalPages ? '#161b22' : '#21262d',
-            color: currentPage === totalPages ? '#6e7681' : '#c9d1d9',
-            border: '1px solid #30363d',
-            borderRadius: '6px',
+            opacity: currentPage === totalPages ? 0.5 : 1,
             cursor: currentPage === totalPages ? 'not-allowed' : 'pointer',
-            fontSize: '0.85rem',
           }}
         >
           Next
+          <FontAwesomeIcon icon={faChevronRight} />
         </button>
       </div>
     );
@@ -473,71 +497,42 @@ export function DocumentBrowser() {
     <div
       style={{
         minHeight: '100vh',
-        backgroundColor: '#0d1117',
-        color: '#c9d1d9',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif',
+        backgroundColor: 'var(--color-bg-primary)',
+        color: 'var(--color-text-primary)',
+        fontFamily: 'var(--font-family)',
       }}
     >
-      <header
-        style={{
-          padding: '1rem 2rem',
-          borderBottom: '1px solid #30363d',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+      <header className="app-header">
+        <div className="app-header__left">
           <button
             onClick={handleBackToRepositories}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#21262d',
-              color: '#c9d1d9',
-              border: '1px solid #30363d',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-            }}
+            className="btn btn--ghost"
           >
-            ← Back to Repositories
+            <FontAwesomeIcon icon={faArrowLeft} />
+            Back
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }} data-testid="breadcrumb">
-            <h1 style={{ fontSize: '1.5rem', fontWeight: 600, margin: 0 }}>
+          <div className="app-header__breadcrumb" data-testid="breadcrumb">
+            <span className="app-header__breadcrumb-item--active" style={{ fontWeight: 600 }}>
               {owner}/{repo}
-            </h1>
-            <span style={{ color: '#8b949e', fontSize: '1rem' }}>/</span>
-            <span style={{ color: '#8b949e', fontSize: '1rem' }}>Markdown Files</span>
+            </span>
+            <span className="app-header__breadcrumb-separator">/</span>
+            <span className="app-header__breadcrumb-item">Markdown Files</span>
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div className="app-header__right">
           <button
             onClick={() => setIsModalOpen(true)}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#238636',
-              color: '#ffffff',
-              border: '1px solid #2ea043',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '0.9rem',
-              fontWeight: 500,
-            }}
+            className="btn btn--primary"
           >
-            + New Document
+            <FontAwesomeIcon icon={faPlus} />
+            New Document
           </button>
           <button
             onClick={handleLogout}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#21262d',
-              color: '#c9d1d9',
-              border: '1px solid #30363d',
-              borderRadius: '6px',
-              cursor: 'pointer',
-            }}
+            className="btn btn--secondary"
           >
+            <FontAwesomeIcon icon={faSignOutAlt} />
             Logout
           </button>
         </div>
@@ -647,7 +642,7 @@ export function DocumentBrowser() {
               <div
                 style={{
                   display: 'flex',
-                  gap: '1rem',
+                  gap: 'var(--space-3)',
                   flexWrap: 'wrap',
                   alignItems: 'center',
                 }}
@@ -656,38 +651,52 @@ export function DocumentBrowser() {
                 <button
                   data-testid="view-toggle"
                   onClick={() => setViewMode(viewMode === 'tree' ? 'list' : 'tree')}
-                  style={{
-                    padding: '0.5rem 1rem',
-                    backgroundColor: '#21262d',
-                    color: '#c9d1d9',
-                    border: '1px solid #30363d',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '0.85rem',
-                    fontWeight: 500,
-                  }}
+                  className="btn btn--secondary btn--sm"
                 >
+                  <FontAwesomeIcon icon={viewMode === 'tree' ? faList : faFolderTree} />
                   {viewMode === 'tree' ? 'List View' : 'Tree View'}
                 </button>
 
                 {/* Search input */}
-                <input
-                  type="text"
-                  placeholder="Search files..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  style={{
-                    flex: 1,
-                    minWidth: '200px',
-                    padding: '0.5rem',
-                    backgroundColor: '#0d1117',
-                    color: '#c9d1d9',
-                    border: '1px solid #30363d',
-                    borderRadius: '6px',
-                    fontSize: '0.85rem',
-                    outline: 'none',
-                  }}
-                />
+                <div style={{ flex: 1, minWidth: '200px', position: 'relative' }}>
+                  <FontAwesomeIcon 
+                    icon={faSearch} 
+                    style={{ 
+                      position: 'absolute', 
+                      left: 'var(--space-3)', 
+                      top: '50%', 
+                      transform: 'translateY(-50%)',
+                      color: 'var(--color-text-muted)',
+                      fontSize: '0.75rem',
+                    }} 
+                  />
+                  <input
+                    type="text"
+                    placeholder="Search files..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: 'var(--space-2) var(--space-3)',
+                      paddingLeft: '2rem',
+                      backgroundColor: 'var(--color-bg-primary)',
+                      color: 'var(--color-text-primary)',
+                      border: '1px solid var(--color-border-default)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '0.8125rem',
+                      outline: 'none',
+                      transition: 'border-color 0.15s ease, box-shadow 0.15s ease',
+                    }}
+                    onFocus={(e) => {
+                      e.target.style.borderColor = 'var(--color-accent-emphasis)';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(31, 111, 235, 0.2)';
+                    }}
+                    onBlur={(e) => {
+                      e.target.style.borderColor = 'var(--color-border-default)';
+                      e.target.style.boxShadow = 'none';
+                    }}
+                  />
+                </div>
 
                 {/* Sort dropdown (only show in list view) */}
                 {viewMode === 'list' && (
@@ -696,12 +705,12 @@ export function DocumentBrowser() {
                     value={sortOption}
                     onChange={(e) => setSortOption(e.target.value as SortOption)}
                     style={{
-                      padding: '0.5rem',
-                      backgroundColor: '#0d1117',
-                      color: '#c9d1d9',
-                      border: '1px solid #30363d',
-                      borderRadius: '6px',
-                      fontSize: '0.85rem',
+                      padding: 'var(--space-2) var(--space-3)',
+                      backgroundColor: 'var(--color-bg-primary)',
+                      color: 'var(--color-text-primary)',
+                      border: '1px solid var(--color-border-default)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: '0.8125rem',
                       cursor: 'pointer',
                       outline: 'none',
                     }}
@@ -715,7 +724,7 @@ export function DocumentBrowser() {
             </div>
 
             {viewMode === 'tree' ? (
-              <div style={{ padding: '0.5rem 0' }} data-testid="file-tree">
+              <div style={{ padding: 'var(--space-2) 0' }} data-testid="file-tree">
                 {searchQuery ? (
                   // Show filtered files in tree format when searching
                   filteredFiles.length > 0 ? (
@@ -724,36 +733,41 @@ export function DocumentBrowser() {
                         key={file.path}
                         onClick={() => handleFileClick(file.path)}
                         style={{
-                          padding: '0.5rem',
-                          paddingLeft: '0.5rem',
+                          padding: 'var(--space-2)',
+                          paddingLeft: 'var(--space-2)',
                           cursor: 'pointer',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '0.5rem',
+                          gap: 'var(--space-2)',
                           backgroundColor: 'transparent',
-                          transition: 'background-color 0.2s',
+                          transition: 'background-color 0.15s ease',
+                          borderRadius: 'var(--radius-sm)',
+                          margin: '0 var(--space-2)',
                         }}
                         onMouseEnter={(e) => {
-                          e.currentTarget.style.backgroundColor = '#21262d';
+                          e.currentTarget.style.backgroundColor = 'var(--color-bg-hover)';
                         }}
                         onMouseLeave={(e) => {
                           e.currentTarget.style.backgroundColor = 'transparent';
                         }}
                       >
-                        <span style={{ fontSize: '0.9rem' }}>📄</span>
-                        <span style={{ fontSize: '0.9rem', color: '#58a6ff' }}>{file.name}</span>
-                        <span style={{ fontSize: '0.75rem', color: '#8b949e', marginLeft: '0.5rem' }}>
+                        <FontAwesomeIcon 
+                          icon={faFileAlt} 
+                          className="tree-icon tree-icon--file"
+                        />
+                        <span style={{ fontSize: '0.875rem', color: 'var(--color-text-link)' }}>{file.name}</span>
+                        <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginLeft: 'var(--space-2)' }}>
                           {file.path}
                         </span>
                         {file.size !== undefined && (
-                          <span style={{ fontSize: '0.75rem', color: '#8b949e', marginLeft: 'auto' }}>
+                          <span style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginLeft: 'auto' }}>
                             {formatFileSize(file.size)}
                           </span>
                         )}
                       </div>
                     ))
                   ) : (
-                    <div style={{ padding: '2rem', textAlign: 'center', color: '#8b949e' }}>
+                    <div style={{ padding: 'var(--space-6)', textAlign: 'center', color: 'var(--color-text-secondary)' }}>
                       No files found matching "{searchQuery}"
                     </div>
                   )

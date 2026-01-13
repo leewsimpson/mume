@@ -255,13 +255,98 @@ test.describe('US-MVP-011: Manual Save Button', () => {
     await editor.click();
     await editor.pressSequentially(' manual save test');
 
+    // Monitor the save API call
+    const saveResponsePromise = authenticatedPage.waitForResponse(
+      response => response.url().includes('/documents/') 
+        && response.url().includes('/save')
+        && response.request().method() === 'POST',
+      { timeout: 15000 }
+    );
+
     // Click save
     const saveButton = authenticatedPage.getByRole('button', { name: /save.*now|save/i });
     await saveButton.click();
 
+    // Verify API call was made
+    const saveResponse = await saveResponsePromise;
+    
+    // Should return 200 OK
+    expect(saveResponse.status()).toBe(200);
+    
+    // Verify response structure
+    const responseBody = await saveResponse.json();
+    expect(responseBody.success).toBe(true);
+    expect(responseBody.message).toContain('saved');
+    expect(responseBody).toHaveProperty('sha');
+
     // Should show saving state
     const saveStatus = authenticatedPage.locator('[data-testid="save-status"]');
     await expect(saveStatus.getByText(/saving|saved/i)).toBeVisible({ timeout: 10000 });
+  });
+
+  test('should show error message when save fails', async ({ authenticatedPage }) => {
+    // This test verifies that save failures are NOT silent
+    await authenticatedPage.goto(editorUrl);
+
+    const editor = authenticatedPage.locator('[data-testid="markdown-editor"]');
+    await expect(editor).toBeVisible();
+
+    // Intercept save endpoint and force it to fail
+    await authenticatedPage.route('**/documents/*/save', route => {
+      route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: false,
+          error: 'Test error: Save failed intentionally'
+        })
+      });
+    });
+
+    // Type content
+    await editor.click();
+    await editor.pressSequentially('This will fail to save');
+
+    // Try to save
+    const saveButton = authenticatedPage.getByRole('button', { name: /save.*now|save/i });
+    await saveButton.click();
+
+    // Should show error status
+    const saveStatus = authenticatedPage.locator('[data-testid="save-status"]');
+    await expect(saveStatus.getByText(/error|failed/i)).toBeVisible({ timeout: 5000 });
+    
+    // Error message should be visible to user
+    await expect(saveStatus).toHaveCSS('color', /rgb\(248, 81, 73\)/); // Red color
+  });
+
+  test('should handle save immediately after page load', async ({ authenticatedPage }) => {
+    // This test verifies the fix for the race condition where save is clicked
+    // before the Y.Doc is fully initialized in y-websocket
+    await authenticatedPage.goto(editorUrl);
+
+    const editor = authenticatedPage.locator('[data-testid="markdown-editor"]');
+    await expect(editor).toBeVisible();
+
+    // Type content immediately
+    await editor.click();
+    await editor.pressSequentially('Quick edit');
+
+    // Monitor save API call
+    const saveResponsePromise = authenticatedPage.waitForResponse(
+      response => response.url().includes('/save') && response.request().method() === 'POST',
+      { timeout: 15000 }
+    );
+
+    // Click save immediately (might trigger race condition)
+    const saveButton = authenticatedPage.getByRole('button', { name: /save.*now|save/i });
+    await saveButton.click();
+
+    // Should still succeed (either immediately or after retry)
+    const saveResponse = await saveResponsePromise;
+    expect(saveResponse.status()).toBe(200);
+    
+    const responseBody = await saveResponse.json();
+    expect(responseBody.success).toBe(true);
   });
 
   test('should support Ctrl+S keyboard shortcut', async ({ authenticatedPage }) => {
