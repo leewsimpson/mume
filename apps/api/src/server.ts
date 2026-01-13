@@ -79,6 +79,9 @@ async function bootstrap() {
   console.log('✅ Redis user service initialized');
 
   // Configure session with Redis store
+  // Note: sameSite: 'none' is required for cross-site cookies (frontend and API on different domains)
+  // This requires secure: true (HTTPS) in production
+  const isProduction = process.env.NODE_ENV === 'production';
   app.use(
     session({
       store: new RedisStore({ client: redisClient }),
@@ -86,10 +89,10 @@ async function bootstrap() {
       resave: false,
       saveUninitialized: false,
       cookie: {
-        secure: process.env.NODE_ENV === 'production', // Use secure cookies in production
+        secure: isProduction, // HTTPS required for sameSite: 'none'
         httpOnly: true,
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-        sameSite: 'lax',
+        sameSite: isProduction ? 'none' : 'lax', // 'none' for cross-site in production
       },
     })
   );
