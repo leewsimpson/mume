@@ -50,6 +50,15 @@ async function bootstrap() {
     credentials: true
   }));
 
+  // Log CORS requests for debugging
+  app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    if (origin && origin !== FRONTEND_URL) {
+      console.log(`[CORS] Request from unexpected origin: ${origin}, expected: ${FRONTEND_URL}`);
+    }
+    next();
+  });
+
   // Initialize Redis client for session store
   console.log(`Connecting to Redis at: ${REDIS_URL}`);
   const redisClient = createClient({ 
@@ -140,8 +149,18 @@ async function bootstrap() {
   // Create HTTP server
   const server = createServer(app);
 
-  // Create WebSocket server
-  const wss = new WebSocketServer({ server });
+  // Create WebSocket server with origin verification
+  const wss = new WebSocketServer({ 
+    server,
+    verifyClient: (info) => {
+      const origin = info.origin || info.req.headers.origin;
+      if (origin && origin !== FRONTEND_URL) {
+        console.log(`[WS] Rejected connection from origin: ${origin}, expected: ${FRONTEND_URL}`);
+        return false;
+      }
+      return true;
+    }
+  });
 
   // Handle WebSocket connections
   wss.on('connection', (ws, req) => {

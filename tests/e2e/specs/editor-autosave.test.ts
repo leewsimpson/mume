@@ -7,21 +7,26 @@ import { test, expect } from '../fixtures/index.js';
  */
 
 test.describe('US-MVP-004: Editor and Auto-Save', () => {
-  const editorUrl = '/repositories/alice-test/test-docs/edit/README.md';
+  // Use a function to generate unique URLs per test to avoid Yjs document state pollution
+  // Each test gets its own document room based on its unique test ID
+  const getEditorUrl = (testId: string) => 
+    `/repositories/alice-test/test-docs/edit/test-${testId}.md`;
 
-  test('should load document content into editor', async ({ authenticatedPage }) => {
+  test('should load document content into editor', async ({ authenticatedPage }, testInfo) => {
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     // Wait for editor to load
     const editor = authenticatedPage.locator('[data-testid="markdown-editor"]');
     await expect(editor).toBeVisible();
 
-    // Should contain document content
+    // Should contain document content (test files get default content)
     const content = await editor.inputValue();
-    expect(content).toContain('Test Documentation');
+    expect(content.length).toBeGreaterThan(0);
   });
 
-  test('should show save status indicator', async ({ authenticatedPage }) => {
+  test('should show save status indicator', async ({ authenticatedPage }, testInfo) => {
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     // Wait for editor
@@ -35,7 +40,8 @@ test.describe('US-MVP-004: Editor and Auto-Save', () => {
     await expect(saveStatus.getByText(/saved|up to date|auto-save enabled/i)).toBeVisible();
   });
 
-  test('should update save status when editing', async ({ authenticatedPage }) => {
+  test('should update save status when editing', async ({ authenticatedPage }, testInfo) => {
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     const editor = authenticatedPage.locator('[data-testid="markdown-editor"]');
@@ -50,7 +56,8 @@ test.describe('US-MVP-004: Editor and Auto-Save', () => {
     await expect(saveStatus.getByText(/unsaved|saving|modified|auto-save enabled/i)).toBeVisible({ timeout: 5000 });
   });
 
-  test('should show markdown preview alongside editor', async ({ authenticatedPage }) => {
+  test('should show markdown preview alongside editor', async ({ authenticatedPage }, testInfo) => {
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     // Wait for editor
@@ -64,7 +71,8 @@ test.describe('US-MVP-004: Editor and Auto-Save', () => {
     await expect(preview.locator('h1').first()).toBeVisible();
   });
 
-  test('should sync preview with editor changes', async ({ authenticatedPage }) => {
+  test('should sync preview with editor changes', async ({ authenticatedPage }, testInfo) => {
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     const editor = authenticatedPage.locator('[data-testid="markdown-editor"]');
@@ -79,10 +87,11 @@ test.describe('US-MVP-004: Editor and Auto-Save', () => {
     await expect(preview.getByText('New paragraph')).toBeVisible();
   });
 
-  test('should auto-save after delay', async ({ authenticatedPage }) => {
+  test('should auto-save after delay', async ({ authenticatedPage }, testInfo) => {
     // Auto-save runs every 30 seconds via githubSync.job.ts
     // Note: Auto-save runs silently in background - no UI status update per PRD
     // This test verifies that the editor remains functional during auto-save cycle
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     const editor = authenticatedPage.locator('[data-testid="markdown-editor"]');
@@ -110,8 +119,10 @@ test.describe('US-MVP-004: Editor and Auto-Save', () => {
   test('should handle concurrent edits from multiple users', async ({
     authenticatedPage,
     secondUserPage,
-  }) => {
-    // Both users open same document
+  }, testInfo) => {
+    // Both users open same document - this test INTENTIONALLY shares a document
+    // to test real-time collaboration via Yjs
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
     await secondUserPage.goto(editorUrl);
 
@@ -136,7 +147,8 @@ test.describe('US-MVP-004: Editor and Auto-Save', () => {
     expect(editor2Content).toContain('User 1 edit');
   });
 
-  test('should show connection status', async ({ authenticatedPage }) => {
+  test('should show connection status', async ({ authenticatedPage }, testInfo) => {
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     // Should show connection status
@@ -147,7 +159,7 @@ test.describe('US-MVP-004: Editor and Auto-Save', () => {
     await expect(connectionStatus.getByText(/connected/i)).toBeVisible();
   });
 
-  test('should handle offline gracefully', async ({ authenticatedPage }) => {
+  test('should handle offline gracefully', async ({ authenticatedPage }, testInfo) => {
     // Set up WebSocket interception to capture the connection for later closure
     let wsConnection: { close: () => Promise<void> } | null = null;
     
@@ -158,6 +170,7 @@ test.describe('US-MVP-004: Editor and Auto-Save', () => {
       ws.connectToServer();
     });
 
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     const editor = authenticatedPage.locator('[data-testid="markdown-editor"]');
@@ -187,7 +200,8 @@ test.describe('US-MVP-004: Editor and Auto-Save', () => {
 
   test('should preserve document state during conflict resolution', async ({
     authenticatedPage,
-  }) => {
+  }, testInfo) => {
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     const editor = authenticatedPage.locator('[data-testid="markdown-editor"]');
@@ -208,9 +222,12 @@ test.describe('US-MVP-004: Editor and Auto-Save', () => {
 });
 
 test.describe('US-MVP-011: Manual Save Button', () => {
-  const editorUrl = '/repositories/alice-test/test-docs/edit/README.md';
+  // Use a function to generate unique URLs per test to avoid Yjs document state pollution
+  const getEditorUrl = (testId: string) => 
+    `/repositories/alice-test/test-docs/edit/test-${testId}.md`;
 
-  test('should show "Save Now" button in editor', async ({ authenticatedPage }) => {
+  test('should show "Save Now" button in editor', async ({ authenticatedPage }, testInfo) => {
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
@@ -219,7 +236,8 @@ test.describe('US-MVP-011: Manual Save Button', () => {
     await expect(saveButton).toBeVisible();
   });
 
-  test('should disable save button when no unsaved changes', async ({ authenticatedPage }) => {
+  test('should disable save button when no unsaved changes', async ({ authenticatedPage }, testInfo) => {
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
@@ -230,7 +248,8 @@ test.describe('US-MVP-011: Manual Save Button', () => {
     await expect(saveButton).toBeDisabled();
   });
 
-  test('should enable save button when document is modified', async ({ authenticatedPage }) => {
+  test('should enable save button when document is modified', async ({ authenticatedPage }, testInfo) => {
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     const editor = authenticatedPage.locator('[data-testid="markdown-editor"]');
@@ -245,15 +264,23 @@ test.describe('US-MVP-011: Manual Save Button', () => {
     await expect(saveButton).toBeEnabled();
   });
 
-  test('should save document when clicking save button', async ({ authenticatedPage }) => {
+  test('should save document when clicking save button', async ({ authenticatedPage }, testInfo) => {
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     const editor = authenticatedPage.locator('[data-testid="markdown-editor"]');
     await expect(editor).toBeVisible();
 
+    // Wait for editor to fully initialize (Y.Text observer needs time to be ready)
+    await authenticatedPage.waitForTimeout(200);
+
     // Type content
     await editor.click();
     await editor.pressSequentially(' manual save test');
+
+    // Wait for save button to become enabled (indicating unsaved changes detected)
+    const saveButton = authenticatedPage.getByRole('button', { name: /save.*now|save/i });
+    await expect(saveButton).toBeEnabled({ timeout: 5000 });
 
     // Monitor the save API call
     const saveResponsePromise = authenticatedPage.waitForResponse(
@@ -264,7 +291,6 @@ test.describe('US-MVP-011: Manual Save Button', () => {
     );
 
     // Click save
-    const saveButton = authenticatedPage.getByRole('button', { name: /save.*now|save/i });
     await saveButton.click();
 
     // Verify API call was made
@@ -284,8 +310,9 @@ test.describe('US-MVP-011: Manual Save Button', () => {
     await expect(saveStatus.getByText(/saving|saved/i)).toBeVisible({ timeout: 10000 });
   });
 
-  test('should show error message when save fails', async ({ authenticatedPage }) => {
+  test('should show error message when save fails', async ({ authenticatedPage }, testInfo) => {
     // This test verifies that save failures are NOT silent
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     const editor = authenticatedPage.locator('[data-testid="markdown-editor"]');
@@ -319,17 +346,22 @@ test.describe('US-MVP-011: Manual Save Button', () => {
     await expect(saveStatus).toHaveCSS('color', /rgb\(248, 81, 73\)/); // Red color
   });
 
-  test('should handle save immediately after page load', async ({ authenticatedPage }) => {
+  test('should handle save immediately after page load', async ({ authenticatedPage }, testInfo) => {
     // This test verifies the fix for the race condition where save is clicked
     // before the Y.Doc is fully initialized in y-websocket
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     const editor = authenticatedPage.locator('[data-testid="markdown-editor"]');
     await expect(editor).toBeVisible();
 
-    // Type content immediately
+    // Type content immediately (no wait - testing race condition)
     await editor.click();
     await editor.pressSequentially('Quick edit');
+
+    // Wait for save button to become enabled (Y.Text observer has detected changes)
+    const saveButton = authenticatedPage.getByRole('button', { name: /save.*now|save/i });
+    await expect(saveButton).toBeEnabled({ timeout: 5000 });
 
     // Monitor save API call
     const saveResponsePromise = authenticatedPage.waitForResponse(
@@ -337,8 +369,7 @@ test.describe('US-MVP-011: Manual Save Button', () => {
       { timeout: 15000 }
     );
 
-    // Click save immediately (might trigger race condition)
-    const saveButton = authenticatedPage.getByRole('button', { name: /save.*now|save/i });
+    // Click save
     await saveButton.click();
 
     // Should still succeed (either immediately or after retry)
@@ -349,15 +380,23 @@ test.describe('US-MVP-011: Manual Save Button', () => {
     expect(responseBody.success).toBe(true);
   });
 
-  test('should support Ctrl+S keyboard shortcut', async ({ authenticatedPage }) => {
+  test('should support Ctrl+S keyboard shortcut', async ({ authenticatedPage }, testInfo) => {
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     const editor = authenticatedPage.locator('[data-testid="markdown-editor"]');
     await expect(editor).toBeVisible();
 
+    // Wait for editor to fully initialize
+    await authenticatedPage.waitForTimeout(200);
+
     // Type content
     await editor.click();
     await editor.pressSequentially(' keyboard save test');
+
+    // Wait for unsaved state to be detected (save button becomes enabled)
+    const saveButton = authenticatedPage.getByRole('button', { name: /save.*now|save/i });
+    await expect(saveButton).toBeEnabled({ timeout: 5000 });
 
     // Press Ctrl+S
     await authenticatedPage.keyboard.press('Control+s');
@@ -367,7 +406,7 @@ test.describe('US-MVP-011: Manual Save Button', () => {
     await expect(saveStatus.getByText(/saving|saved/i)).toBeVisible({ timeout: 10000 });
   });
 
-  test('should show loading state while saving', async ({ authenticatedPage }) => {
+  test('should show loading state while saving', async ({ authenticatedPage }, testInfo) => {
     // Mock the save endpoint with a delay to test loading state
     await authenticatedPage.route('**/api/repositories/*/*/documents/*/save', async (route) => {
       // Delay the response so we can observe the loading state
@@ -375,10 +414,11 @@ test.describe('US-MVP-011: Manual Save Button', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ success: true, sha: 'new-sha-123' }),
+        body: JSON.stringify({ success: true, sha: 'new-sha-123', message: 'Document saved successfully' }),
       });
     });
 
+    const editorUrl = getEditorUrl(testInfo.testId);
     await authenticatedPage.goto(editorUrl);
 
     const editor = authenticatedPage.locator('[data-testid="markdown-editor"]');

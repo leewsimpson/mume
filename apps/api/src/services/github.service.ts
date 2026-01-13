@@ -58,6 +58,132 @@ interface FileContent {
   encoding: string;
 }
 
+// ============================================================================
+// E2E Test Mode Mock Data
+// ============================================================================
+
+/**
+ * Mock repositories for E2E testing
+ * These match the test fixtures in tests/e2e/mocks/github-api.mock.ts
+ */
+const E2E_MOCK_REPOSITORIES: Repository[] = [
+  {
+    id: 1,
+    name: 'test-docs',
+    full_name: 'alice-test/test-docs',
+    owner: {
+      login: 'alice-test',
+      avatar_url: 'https://avatars.githubusercontent.com/u/12345?v=4',
+    },
+    description: 'Test documentation repository',
+    private: false,
+    permissions: { admin: true, push: true, pull: true },
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 2,
+    name: 'private-notes',
+    full_name: 'alice-test/private-notes',
+    owner: {
+      login: 'alice-test',
+      avatar_url: 'https://avatars.githubusercontent.com/u/12345?v=4',
+    },
+    description: 'Private notes repository',
+    private: true,
+    permissions: { admin: true, push: true, pull: true },
+    updated_at: new Date(Date.now() - 86400000).toISOString(),
+  },
+  {
+    id: 3,
+    name: 'shared-wiki',
+    full_name: 'org-test/shared-wiki',
+    owner: {
+      login: 'org-test',
+      avatar_url: 'https://avatars.githubusercontent.com/u/99999?v=4',
+    },
+    description: 'Shared organisation wiki',
+    private: false,
+    permissions: { admin: false, push: true, pull: true },
+    updated_at: new Date(Date.now() - 172800000).toISOString(),
+  },
+];
+
+/**
+ * Mock file tree for E2E testing
+ */
+const E2E_MOCK_TREE: TreeResponse = {
+  sha: 'main-sha',
+  url: 'https://api.github.com/repos/test/tree',
+  tree: [
+    { path: 'README.md', mode: '100644', type: 'blob', sha: 'abc123', size: 1024 },
+    { path: 'docs', mode: '040000', type: 'tree', sha: 'def456' },
+    { path: 'docs/getting-started.md', mode: '100644', type: 'blob', sha: 'ghi789', size: 2048 },
+    { path: 'docs/api-reference.md', mode: '100644', type: 'blob', sha: 'jkl012', size: 4096 },
+    { path: 'docs/examples', mode: '040000', type: 'tree', sha: 'mno345' },
+    { path: 'docs/examples/basic.md', mode: '100644', type: 'blob', sha: 'pqr678', size: 512 },
+    { path: 'docs/examples/advanced.md', mode: '100644', type: 'blob', sha: 'stu901', size: 1536 },
+    { path: 'notes', mode: '040000', type: 'tree', sha: 'vwx234' },
+    { path: 'notes/meeting-notes.md', mode: '100644', type: 'blob', sha: 'yza567', size: 768 },
+    { path: 'CHANGELOG.md', mode: '100644', type: 'blob', sha: 'bcd890', size: 3072 },
+  ],
+  truncated: false,
+};
+
+/**
+ * Mock file contents for E2E testing
+ */
+const E2E_MOCK_FILES: Record<string, { content: string; sha: string }> = {
+  'README.md': {
+    content: `# Test Documentation
+
+Welcome to the test documentation repository.
+
+## Getting Started
+
+Check out the [Getting Started Guide](docs/getting-started.md) to begin.
+
+## Features
+
+- Collaborative editing
+- Real-time synchronisation
+- Comment threads
+- GitHub integration
+`,
+    sha: 'abc123',
+  },
+  'docs/getting-started.md': {
+    content: `# Getting Started
+
+This guide will help you get started with the collaborative markdown editor.
+
+## Prerequisites
+
+- Node.js 18+
+- Docker
+- GitHub account
+
+## Installation
+
+1. Clone the repository
+2. Run \`docker-compose up -d\`
+3. Run \`npm install\` in both apps/api and apps/frontend
+4. Start the development servers
+
+## Next Steps
+
+Continue to the [API Reference](api-reference.md) for more details.
+`,
+    sha: 'ghi789',
+  },
+};
+
+/**
+ * Check if running in E2E test mode
+ */
+function isE2ETestMode(): boolean {
+  return process.env.E2E_TEST_MODE === 'true';
+}
+
 /**
  * Service for interacting with GitHub API using Octokit
  */
@@ -118,6 +244,15 @@ export class GitHubService {
     token: string,
     logger?: Logger
   ): Promise<Repository[]> {
+    // Return mock data in E2E test mode
+    if (isE2ETestMode()) {
+      logger?.info('E2E test mode: returning mock repositories', {
+        operation: 'listUserRepositories',
+        count: E2E_MOCK_REPOSITORIES.length,
+      });
+      return E2E_MOCK_REPOSITORIES;
+    }
+
     const cacheKey = `repos:${token.substring(0, 10)}`;
     const cached = this.repoCache.get(cacheKey);
 
@@ -224,6 +359,17 @@ export class GitHubService {
     token: string,
     logger?: Logger
   ): Promise<TreeResponse> {
+    // Return mock data in E2E test mode
+    if (isE2ETestMode()) {
+      logger?.info('E2E test mode: returning mock tree', {
+        operation: 'getRepositoryTree',
+        owner,
+        repo,
+        itemCount: E2E_MOCK_TREE.tree.length,
+      });
+      return E2E_MOCK_TREE;
+    }
+
     const cacheKey = `tree:${owner}/${repo}`;
     const cached = this.treeCache.get(cacheKey);
 
@@ -310,6 +456,24 @@ export class GitHubService {
     token: string,
     logger?: Logger
   ): Promise<{ content: string; sha: string }> {
+    // Return mock data in E2E test mode
+    if (isE2ETestMode()) {
+      const mockFile = E2E_MOCK_FILES[path];
+      if (mockFile) {
+        logger?.info('E2E test mode: returning mock file content', {
+          operation: 'getFileContent',
+          owner,
+          repo,
+          path,
+        });
+        return mockFile;
+      }
+      // If file not in mock data, throw 404-like error
+      const error = new Error('File not found') as Error & { status: number };
+      error.status = 404;
+      throw error;
+    }
+
     logger?.info('Fetching file content from GitHub', {
       operation: 'getFileContent',
       owner,
@@ -376,6 +540,19 @@ export class GitHubService {
     token: string,
     logger?: Logger
   ): Promise<{ sha: string; commit: string }> {
+    // Return mock success in E2E test mode
+    if (isE2ETestMode()) {
+      const newSha = `sha-${Date.now()}`;
+      logger?.info('E2E test mode: simulating file update', {
+        operation: 'updateFile',
+        owner,
+        repo,
+        path,
+        newSha,
+      });
+      return { sha: newSha, commit: `commit-${Date.now()}` };
+    }
+
     logger?.info('Updating file in GitHub', {
       operation: 'updateFile',
       owner,
@@ -444,6 +621,25 @@ export class GitHubService {
     token: string,
     logger?: Logger
   ): Promise<{ sha: string; commit: string }> {
+    // Return mock success in E2E test mode
+    if (isE2ETestMode()) {
+      // Check if file already exists in mock data
+      if (E2E_MOCK_FILES[path]) {
+        const error = new Error('File already exists') as Error & { status: number };
+        error.status = 409;
+        throw error;
+      }
+      const newSha = `sha-${Date.now()}`;
+      logger?.info('E2E test mode: simulating file creation', {
+        operation: 'createFile',
+        owner,
+        repo,
+        path,
+        newSha,
+      });
+      return { sha: newSha, commit: `commit-${Date.now()}` };
+    }
+
     logger?.info('Creating file in GitHub', {
       operation: 'createFile',
       owner,

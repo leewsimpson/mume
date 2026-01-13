@@ -83,12 +83,13 @@ test.describe('US-MVP-002: Document Creation', () => {
     const modal = authenticatedPage.locator('[data-testid="create-document-modal"]');
     await expect(modal).toBeVisible();
 
-    // Look for folder selector
+    // Look for folder selector (uses FontAwesome icon, not emoji)
     const folderSelector = modal.locator('[data-testid="folder-selector"]');
 
     if (await folderSelector.isVisible()) {
-      // Select a folder - use exact match to avoid ambiguity with nested folders
-      await folderSelector.getByRole('button', { name: '📁 docs', exact: true }).click();
+      // Select a folder - the folder button contains FontAwesome icon + path text
+      // Use text matching for just the folder name since icon renders as SVG
+      await folderSelector.getByRole('button', { name: /^docs$/i }).click();
 
       // Path preview should update
       await expect(modal.getByText(/docs\//)).toBeVisible();

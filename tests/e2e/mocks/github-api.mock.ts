@@ -1,4 +1,4 @@
-import type { Page, Route } from '@playwright/test';
+import type { Page, Route, BrowserContext, Request } from '@playwright/test';
 
 /**
  * Mock GitHub API responses for E2E testing
@@ -398,6 +398,26 @@ export async function setupGitHubApiMock(page: Page): Promise<void> {
             sha: file.sha,
           }),
         });
+      } else if (filePath.startsWith('test-') && filePath.endsWith('.md')) {
+        // Handle dynamic test files - return default content for test isolation
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            content: `# Test Document\n\nThis is a test document for E2E testing.\n`,
+            sha: `sha-test-${Date.now()}`,
+          }),
+        });
+      } else if (filePath.startsWith('docs/test-') && filePath.endsWith('.md')) {
+        // Handle dynamic nested test files
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            content: `# Nested Test Document\n\nThis is a nested test document for E2E testing.\n`,
+            sha: `sha-nested-test-${Date.now()}`,
+          }),
+        });
       } else {
         await route.fulfill({
           status: 404,
@@ -714,6 +734,503 @@ export async function setupGitHubApiMock(page: Page): Promise<void> {
         status: 404,
         contentType: 'application/json',
         body: JSON.stringify({ error: 'Comment not found' }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+}
+
+/**
+ * Setup GitHub API mocking on a BrowserContext
+ * This is useful for setting up mocks before creating pages
+ */
+export async function setupGitHubApiMockOnContext(context: BrowserContext): Promise<void> {
+  const apiBaseUrl = 'http://localhost:3000';
+
+  // Mock repository list
+  await context.route(`${apiBaseUrl}/api/repositories`, async (route: Route) => {
+    if (route.request().method() === 'GET') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(TEST_REPOSITORIES),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // Mock repository tree
+  await context.route(`${apiBaseUrl}/api/repositories/*/*/tree`, async (route: Route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        sha: 'main-sha',
+        url: 'https://api.github.com/repos/test/tree',
+        tree: TEST_TREE,
+        truncated: false,
+      }),
+    });
+  });
+
+  // Mock document save endpoint
+  await context.route(`${apiBaseUrl}/api/repositories/*/*/documents/*/save`, async (route: Route) => {
+    if (route.request().method() === 'POST') {
+      const newSha = `sha-${Date.now()}`;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          message: 'Document saved successfully',
+          sha: newSha,
+        }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // Mock file content GET
+  await context.route(`${apiBaseUrl}/api/repositories/*/*/files/**`, async (route: Route) => {
+    const url = route.request().url();
+    const method = route.request().method();
+
+    // Extract file path from URL
+    const match = url.match(/\/files\/(.+)$/);
+    const filePath = match?.[1] ? decodeURIComponent(match[1]) : '';
+
+    if (method === 'GET') {
+      // Check if file was updated
+      const updated = fileUpdates.get(filePath);
+      if (updated) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            content: updated.content,
+            sha: updated.sha,
+          }),
+        });
+        return;
+      }
+
+      // Check if file was created
+      const created = createdFiles.get(filePath);
+      if (created) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            content: created.content,
+            sha: created.sha,
+          }),
+        });
+        return;
+      }
+
+      // Return mock file content
+      const file = TEST_FILES[filePath];
+      if (file) {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            content: file.content,
+            sha: file.sha,
+          }),
+        });
+      } else if (filePath.startsWith('test-') && filePath.endsWith('.md')) {
+        // Handle dynamic test files - return default content for test isolation
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            content: `# Test Document\n\nThis is a test document for E2E testing.\n`,
+            sha: `sha-test-${Date.now()}`,
+          }),
+        });
+      } else if (filePath.startsWith('docs/test-') && filePath.endsWith('.md')) {
+        // Handle dynamic nested test files
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            content: `# Nested Test Document\n\nThis is a nested test document for E2E testing.\n`,
+            sha: `sha-nested-test-${Date.now()}`,
+          }),
+        });
+      } else {
+        await route.fulfill({
+          status: 404,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'File not found' }),
+        });
+      }
+    } else if (method === 'PUT') {
+      // Mock file update
+      const body = route.request().postDataJSON();
+      const newSha = `sha-${Date.now()}`;
+
+      fileUpdates.set(filePath, {
+        content: body.content,
+        sha: newSha,
+        message: body.message,
+      });
+
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          sha: newSha,
+          commit: `commit-${Date.now()}`,
+        }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // Mock file creation POST
+  await context.route(`${apiBaseUrl}/api/repositories/*/*/files`, async (route: Route) => {
+    if (route.request().method() === 'POST') {
+      const body = route.request().postDataJSON();
+      const filePath = body.path;
+      const newSha = `sha-${Date.now()}`;
+
+      // Check if file already exists
+      if (TEST_FILES[filePath] || createdFiles.has(filePath)) {
+        await route.fulfill({
+          status: 409,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'File already exists' }),
+        });
+        return;
+      }
+
+      createdFiles.set(filePath, {
+        content: body.content,
+        sha: newSha,
+        message: body.message,
+      });
+
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          sha: newSha,
+          commit: `commit-${Date.now()}`,
+        }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // Mock comments GET
+  await context.route(`${apiBaseUrl}/api/repositories/*/*/comments*`, async (route: Route) => {
+    const url = new URL(route.request().url());
+    const filePath = url.searchParams.get('filePath') || '';
+    const commentsKey = filePath;
+    
+    const commentData = mockComments.get(commentsKey);
+    
+    if (commentData) {
+      // Convert to API format
+      const apiComments = commentData.comments.map((c) => ({
+        id: c.id,
+        documentPath: commentData.documentPath,
+        repoOwner: 'alice-test',
+        repoName: 'test-docs',
+        charStart: c.charStart,
+        charEnd: c.charEnd,
+        text: c.text,
+        resolved: c.resolved,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        userId: 1,
+        user: {
+          id: 1,
+          username: c.author.username,
+          avatarUrl: c.author.avatarUrl,
+        },
+        replies: c.replies.map((r) => ({
+          id: r.id,
+          commentId: c.id,
+          userId: 1,
+          text: r.text,
+          createdAt: r.createdAt,
+          updatedAt: r.createdAt,
+          user: {
+            id: 1,
+            username: r.author.username,
+            avatarUrl: r.author.avatarUrl,
+          },
+        })),
+      }));
+      
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(apiComments),
+      });
+    } else {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    }
+  });
+
+  // Mock comment creation POST
+  await context.route(`${apiBaseUrl}/api/comments`, async (route: Route) => {
+    if (route.request().method() === 'POST') {
+      const body = route.request().postDataJSON();
+      const { documentPath, repoOwner, repoName, charStart, charEnd, text } = body;
+      const commentsKey = documentPath;
+      
+      let commentData = mockComments.get(commentsKey);
+      if (!commentData) {
+        commentData = {
+          version: 1,
+          documentPath,
+          comments: [],
+        };
+      }
+      
+      const newComment: MockComment = {
+        id: `c-${Date.now()}`,
+        charStart,
+        charEnd,
+        author: { username: 'alice-test', avatarUrl: 'https://avatars.githubusercontent.com/u/12345' },
+        text,
+        resolved: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        replies: [],
+      };
+      
+      commentData.comments.push(newComment);
+      mockComments.set(commentsKey, commentData);
+      
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: newComment.id,
+          documentPath,
+          repoOwner,
+          repoName,
+          charStart,
+          charEnd,
+          text,
+          resolved: false,
+          createdAt: newComment.createdAt,
+          updatedAt: newComment.updatedAt,
+          userId: 1,
+          user: {
+            id: 1,
+            username: newComment.author.username,
+            avatarUrl: newComment.author.avatarUrl,
+          },
+          replies: [],
+        }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // Mock comment replies POST
+  await context.route(`${apiBaseUrl}/api/comments/*/replies`, async (route: Route) => {
+    if (route.request().method() === 'POST') {
+      const url = route.request().url();
+      const commentIdMatch = url.match(/\/api\/comments\/([^/]+)\/replies/);
+      const commentId = commentIdMatch?.[1];
+      
+      const body = route.request().postDataJSON();
+      const { text, documentPath } = body;
+      
+      const commentData = mockComments.get(documentPath);
+      if (commentData) {
+        const comment = commentData.comments.find((c) => c.id === commentId);
+        if (comment) {
+          const reply = {
+            id: `r-${Date.now()}`,
+            author: { username: 'alice-test', avatarUrl: 'https://avatars.githubusercontent.com/u/12345' },
+            text,
+            createdAt: new Date().toISOString(),
+          };
+          comment.replies.push(reply);
+          
+          await route.fulfill({
+            status: 201,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              id: reply.id,
+              commentId,
+              userId: 1,
+              text,
+              createdAt: reply.createdAt,
+              updatedAt: reply.createdAt,
+              user: {
+                id: 1,
+                username: reply.author.username,
+                avatarUrl: reply.author.avatarUrl,
+              },
+            }),
+          });
+          return;
+        }
+      }
+      
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Comment not found' }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // Mock comment PATCH (resolve/unresolve) and DELETE
+  await context.route(`${apiBaseUrl}/api/comments/*`, async (route: Route) => {
+    const method = route.request().method();
+    const url = route.request().url();
+    
+    // Skip if this is the replies endpoint
+    if (url.includes('/replies')) {
+      await route.continue();
+      return;
+    }
+    
+    if (method === 'PATCH') {
+      const commentIdMatch = url.match(/\/api\/comments\/([^/?]+)/);
+      const commentId = commentIdMatch?.[1];
+      
+      const body = route.request().postDataJSON();
+      const { resolved } = body;
+      
+      // Search all comment data for the matching comment ID
+      for (const [filePath, commentData] of mockComments.entries()) {
+        const comment = commentData.comments.find((c) => c.id === commentId);
+        if (comment) {
+          comment.resolved = resolved;
+          comment.updatedAt = new Date().toISOString();
+          
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              id: comment.id,
+              documentPath: filePath,
+              charStart: comment.charStart,
+              charEnd: comment.charEnd,
+              text: comment.text,
+              resolved: comment.resolved,
+              createdAt: comment.createdAt,
+              updatedAt: comment.updatedAt,
+              userId: 1,
+              user: {
+                id: 1,
+                username: comment.author.username,
+                avatarUrl: comment.author.avatarUrl,
+              },
+              replies: comment.replies,
+            }),
+          });
+          return;
+        }
+      }
+      
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Comment not found' }),
+      });
+    } else if (method === 'DELETE') {
+      const commentIdMatch = url.match(/\/api\/comments\/([^/?]+)/);
+      const commentId = commentIdMatch?.[1];
+      
+      // Search all comment data for the matching comment ID
+      for (const [, commentData] of mockComments.entries()) {
+        const index = commentData.comments.findIndex((c) => c.id === commentId);
+        if (index !== -1) {
+          commentData.comments.splice(index, 1);
+          
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ success: true, message: 'Comment deleted' }),
+          });
+          return;
+        }
+      }
+      
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Comment not found' }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // Mock repository selection endpoints
+  await context.route(`${apiBaseUrl}/api/repositories/select`, async (route: Route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  await context.route(`${apiBaseUrl}/api/repositories/selected`, async (route: Route) => {
+    if (route.request().method() === 'GET') {
+      // Return a mock selected repository
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          owner: 'alice-test',
+          name: 'test-docs',
+          fullName: 'alice-test/test-docs',
+        }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // Mock document registration
+  await context.route(`${apiBaseUrl}/api/repositories/*/*/documents/register`, async (route: Route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // Mock document save
+  await context.route(`${apiBaseUrl}/api/repositories/*/*/documents/*/save`, async (route: Route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, message: 'Document saved successfully', sha: `sha-${Date.now()}` }),
       });
     } else {
       await route.continue();

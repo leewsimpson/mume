@@ -1,6 +1,6 @@
 import { test as base, type Page, type BrowserContext } from '@playwright/test';
 import { TEST_USERS, type MockUser } from '../mocks/github-auth.mock.js';
-import { setupGitHubApiMock, resetGitHubApiMockState } from '../mocks/github-api.mock.js';
+import { setupGitHubApiMockOnContext, resetGitHubApiMockState } from '../mocks/github-api.mock.js';
 import { getUserById } from './redis.fixture.js';
 
 /**
@@ -21,31 +21,54 @@ export interface AuthFixtures {
 
 /**
  * Create authenticated session via test endpoint
+ * Includes retry logic for transient failures (race conditions with Redis seeding)
  */
 async function createAuthenticatedSession(
   context: BrowserContext,
-  user: MockUser
+  user: MockUser,
+  maxRetries: number = 3
 ): Promise<void> {
   const page = await context.newPage();
 
   try {
-    // Call the test login endpoint directly
-    const response = await page.request.post('http://localhost:3000/auth/test-login', {
-      data: { userId: user.id },
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        // Call the test login endpoint directly
+        const response = await page.request.post('http://localhost:3000/auth/test-login', {
+          data: { userId: user.id },
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
 
-    if (!response.ok()) {
-      throw new Error(`Failed to authenticate: ${response.status()}`);
-    }
+        if (!response.ok()) {
+          const errorBody = await response.text().catch(() => 'Unknown error');
+          throw new Error(`Failed to authenticate: ${response.status()} - ${errorBody}`);
+        }
 
-    // Verify authentication worked
-    const userResponse = await page.request.get('http://localhost:3000/auth/user');
-    if (!userResponse.ok()) {
-      throw new Error('Authentication verification failed');
+        // Verify authentication worked
+        const userResponse = await page.request.get('http://localhost:3000/auth/user');
+        if (!userResponse.ok()) {
+          throw new Error('Authentication verification failed');
+        }
+        
+        // Success - exit the retry loop
+        return;
+      } catch (error) {
+        lastError = error as Error;
+        if (attempt < maxRetries) {
+          // Wait before retrying (exponential backoff: 500ms, 1000ms, 2000ms)
+          const delay = 500 * Math.pow(2, attempt - 1);
+          console.warn(`Auth attempt ${attempt}/${maxRetries} failed, retrying in ${delay}ms:`, lastError.message);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
     }
+    
+    // All retries exhausted
+    throw lastError || new Error('Authentication failed after all retries');
   } finally {
     await page.close();
   }
@@ -65,6 +88,10 @@ export const test = base.extend<AuthFixtures>({
     const context = await browser.newContext();
 
     try {
+      // Setup API mocks at context level BEFORE authentication
+      // This ensures route interception works for both page requests and context.request API calls
+      await setupGitHubApiMockOnContext(context);
+
       await createAuthenticatedSession(context, currentUser);
       await use(context);
     } finally {
@@ -75,9 +102,6 @@ export const test = base.extend<AuthFixtures>({
   // Authenticated page with API mocks
   authenticatedPage: async ({ authenticatedContext }, use) => {
     const page = await authenticatedContext.newPage();
-
-    // Setup API mocks
-    await setupGitHubApiMock(page);
 
     // Reset mock state before each test
     resetGitHubApiMockState();
@@ -95,9 +119,11 @@ export const test = base.extend<AuthFixtures>({
     const context = await browser.newContext();
 
     try {
+      // Setup API mocks at context level
+      await setupGitHubApiMockOnContext(context);
+
       await createAuthenticatedSession(context, secondUser);
       const page = await context.newPage();
-      await setupGitHubApiMock(page);
       resetGitHubApiMockState();
       await use(page);
     } finally {

@@ -3,14 +3,25 @@ import { render, screen } from '@testing-library/react';
 import { ConnectionStatus } from '../src/components/ConnectionStatus';
 
 describe('ConnectionStatus', () => {
-  describe('Connected State - Hidden', () => {
-    it('should not render anything when status is connected', () => {
+  describe('Connected State', () => {
+    it('should render nothing when connected (only shows problems)', () => {
       const { container } = render(<ConnectionStatus status="connected" />);
       const statusDiv = container.querySelector('.connection-status');
       expect(statusDiv).not.toBeInTheDocument();
     });
 
-    it('should return null when connected (no DOM elements)', () => {
+    it('should not display any message when connected', () => {
+      const { container } = render(<ConnectionStatus status="connected" />);
+      expect(container.textContent).toBe('');
+    });
+
+    it('should not render indicator when connected', () => {
+      const { container } = render(<ConnectionStatus status="connected" />);
+      const indicator = container.querySelector('.status-indicator');
+      expect(indicator).not.toBeInTheDocument();
+    });
+
+    it('should return null when status is connected', () => {
       const { container } = render(<ConnectionStatus status="connected" />);
       expect(container.firstChild).toBeNull();
     });
@@ -77,20 +88,21 @@ describe('ConnectionStatus', () => {
   });
 
   describe('Real-time Updates', () => {
-    it('should show component when status changes from connected to disconnected', () => {
+    it('should update message when status changes from connected to disconnected', () => {
       const { container, rerender } = render(<ConnectionStatus status="connected" />);
+      // Connected state renders nothing
       expect(container.querySelector('.connection-status')).not.toBeInTheDocument();
 
       rerender(<ConnectionStatus status="disconnected" />);
-      expect(container.querySelector('.connection-status')).toBeInTheDocument();
       expect(screen.getByText('Connection lost - changes may not be saved')).toBeInTheDocument();
     });
 
-    it('should hide component when status changes from disconnected to connected', () => {
+    it('should update message when status changes from disconnected to connected', () => {
       const { container, rerender } = render(<ConnectionStatus status="disconnected" />);
-      expect(container.querySelector('.connection-status')).toBeInTheDocument();
+      expect(screen.getByText('Connection lost - changes may not be saved')).toBeInTheDocument();
 
       rerender(<ConnectionStatus status="connected" />);
+      // Connected state renders nothing (hides the status)
       expect(container.querySelector('.connection-status')).not.toBeInTheDocument();
     });
 
@@ -102,11 +114,12 @@ describe('ConnectionStatus', () => {
       expect(screen.getByText('Reconnecting... (attempt 1)')).toBeInTheDocument();
     });
 
-    it('should hide component when status changes from connecting to connected', () => {
+    it('should update message when status changes from connecting to connected', () => {
       const { container, rerender } = render(<ConnectionStatus status="connecting" />);
-      expect(container.querySelector('.connection-status')).toBeInTheDocument();
+      expect(screen.getByText('Connecting to server...')).toBeInTheDocument();
 
       rerender(<ConnectionStatus status="connected" />);
+      // Connected state renders nothing (hides the status)
       expect(container.querySelector('.connection-status')).not.toBeInTheDocument();
     });
 
