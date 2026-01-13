@@ -57,7 +57,13 @@ router.post('/test-login', async (req, res) => {
  * GET /auth/github
  * Initiate GitHub OAuth flow
  */
-router.get('/github', passport.authenticate('github', { scope: ['repo', 'user:email'] }));
+router.get('/github', (req, res, next) => {
+  console.log('[AUTH] GitHub OAuth initiated', { 
+    sessionID: req.sessionID,
+    cookies: req.headers.cookie ? 'present' : 'none'
+  });
+  next();
+}, passport.authenticate('github', { scope: ['repo', 'user:email'] }));
 
 /**
  * GET /auth/github/callback
@@ -65,8 +71,21 @@ router.get('/github', passport.authenticate('github', { scope: ['repo', 'user:em
  */
 router.get(
   '/github/callback',
+  (req, res, next) => {
+    console.log('[AUTH] GitHub callback received', {
+      sessionID: req.sessionID,
+      query: req.query.code ? 'code present' : 'no code',
+      cookies: req.headers.cookie ? 'present' : 'none'
+    });
+    next();
+  },
   passport.authenticate('github', { failureRedirect: '/login' }),
-  (_req, res) => {
+  (req, res) => {
+    console.log('[AUTH] GitHub auth successful', {
+      sessionID: req.sessionID,
+      user: req.user ? (req.user as SessionUser).username : 'none',
+      redirectTo: `${process.env.FRONTEND_URL}/repositories`
+    });
     // Successful authentication, redirect to frontend repository selector
     res.redirect(`${process.env.FRONTEND_URL}/repositories`);
   }
@@ -77,6 +96,14 @@ router.get(
  * Get current authenticated user info
  */
 router.get('/user', (req, res) => {
+  console.log('[AUTH] User check', {
+    sessionID: req.sessionID,
+    isAuthenticated: req.isAuthenticated(),
+    hasUser: !!req.user,
+    cookies: req.headers.cookie ? 'present' : 'none',
+    cookieHeader: req.headers.cookie?.substring(0, 50) || 'none'
+  });
+  
   if (!req.isAuthenticated() || !req.user) {
     return res.status(401).json({ error: 'Not authenticated' });
   }
