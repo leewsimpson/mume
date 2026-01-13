@@ -40,6 +40,10 @@ async function bootstrap() {
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
+  // Trust proxy - required for secure cookies behind Azure Container Apps load balancer
+  // This ensures req.secure is true when X-Forwarded-Proto is https
+  app.set('trust proxy', 1);
+
   // Configure CORS to allow frontend origin
   app.use(cors({
     origin: FRONTEND_URL,
@@ -82,6 +86,7 @@ async function bootstrap() {
   // Note: sameSite: 'none' is required for cross-site cookies (frontend and API on different domains)
   // This requires secure: true (HTTPS) in production
   const isProduction = process.env.NODE_ENV === 'production';
+  console.log(`Session config: isProduction=${isProduction}, secure=${isProduction}, sameSite=${isProduction ? 'none' : 'lax'}`);
   app.use(
     session({
       store: new RedisStore({ client: redisClient }),
