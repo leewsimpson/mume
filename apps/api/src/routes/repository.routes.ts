@@ -363,7 +363,7 @@ router.post('/:owner/:repo/documents/save', async (req, res) => {
         userId: (req.user as SessionUser)?.id,
         owner: req.params.owner,
         repo: req.params.repo,
-        documentId: req.params.documentId,
+        documentId: req.body.documentId,
         operation: 'manualSave',
       }
     );

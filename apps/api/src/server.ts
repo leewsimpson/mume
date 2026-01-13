@@ -51,7 +51,7 @@ async function bootstrap() {
   }));
 
   // Log CORS requests for debugging
-  app.use((req, res, next) => {
+  app.use((req, _res, next) => {
     const origin = req.headers.origin;
     if (origin && origin !== FRONTEND_URL) {
       console.log(`[CORS] Request from unexpected origin: ${origin}, expected: ${FRONTEND_URL}`);
@@ -152,7 +152,7 @@ async function bootstrap() {
   // Create WebSocket server with origin verification
   const wss = new WebSocketServer({ 
     server,
-    verifyClient: (info) => {
+    verifyClient: (info: { origin?: string; req: { headers: { origin?: string } } }) => {
       const origin = info.origin || info.req.headers.origin;
       if (origin && origin !== FRONTEND_URL) {
         console.log(`[WS] Rejected connection from origin: ${origin}, expected: ${FRONTEND_URL}`);
