@@ -1,14 +1,12 @@
-import { createTestDatabase, runMigrations, resetDatabase, seedTestUsers, closePool } from '../fixtures/database.fixture.js';
+import { setupTestRedis, closeRedisClient } from '../fixtures/redis.fixture.js';
 import { waitForServices } from '../utils/wait-for-services.js';
 
 /**
  * Global setup for Playwright tests
  *
  * Runs once before all tests to prepare the test environment:
- * 1. Wait for Docker services (PostgreSQL, Redis) to be ready
- * 2. Create test database if needed
- * 3. Run migrations
- * 4. Seed test data
+ * 1. Wait for Docker services (Redis) to be ready
+ * 2. Reset Redis and seed test users
  */
 async function globalSetup(): Promise<void> {
   console.log('🚀 Starting global test setup...');
@@ -19,20 +17,17 @@ async function globalSetup(): Promise<void> {
     await waitForServices();
     console.log('✅ Services are ready');
 
-    // Setup database
-    console.log('📦 Setting up test database...');
-    await createTestDatabase();
-    await runMigrations();
-    await resetDatabase();
-    await seedTestUsers();
-    console.log('✅ Database setup complete');
+    // Setup Redis with test data
+    console.log('📦 Setting up test Redis...');
+    await setupTestRedis();
+    console.log('✅ Redis setup complete');
 
     console.log('🎉 Global setup complete!');
   } catch (error) {
     console.error('❌ Global setup failed:', error);
     throw error;
   } finally {
-    await closePool();
+    await closeRedisClient();
   }
 }
 

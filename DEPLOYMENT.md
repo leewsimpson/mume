@@ -170,12 +170,17 @@ All secrets are stored in `.env.azure` (git-ignored).
 2. Remove database migration scripts
 3. Update session storage to be Redis-only (already configured)
 
+### CI/CD (GitHub Actions)
+1. ✅ **CI/CD Workflows Created** - See `TEMP/QUICK-START.md` for setup instructions
+2. **Enable Automated Deployments** - Follow 5-minute setup guide in `TEMP/QUICK-START.md`
+3. **Configure GitHub Secrets** - Service principal and application secrets
+4. **Test Workflows** - Manual trigger to verify everything works
+
 ### Future Enhancements
 1. Implement Git-based comment storage
 2. Add Application Insights for telemetry
 3. Configure custom domains for production
-4. Set up automated deployments via GitHub Actions
-5. Consider upgrading Redis to persistent storage for production
+4. Consider upgrading Redis to persistent storage for production
 
 ---
 
@@ -195,7 +200,7 @@ az monitor log-analytics query \
   --analytics-query "ContainerAppConsoleLogs_CL | where TimeGenerated > ago(1h)"
 ```
 
-### Update Deployments
+### Update Deployments (Manual Method)
 ```bash
 # Rebuild and deploy API
 docker buildx build --platform linux/amd64 -t mumeacr2gdrwkfmswho2.azurecr.io/mume-api:latest --push apps/api
@@ -205,6 +210,19 @@ az containerapp update --name mume-api-dev --resource-group rg-mume --image mume
 cd apps/frontend
 VITE_API_URL=https://mume-api-dev.delightfulground-f44c4ea7.eastus.azurecontainerapps.io npm run build
 npx @azure/static-web-apps-cli deploy --app-location apps/frontend --output-location dist --env production
+```
+
+### Update Deployments (GitHub Actions - Recommended)
+```bash
+# Once CI/CD is configured (see TEMP/QUICK-START.md):
+# Push changes to trigger automatic deployment
+git add .
+git commit -m "your changes"
+git push origin main
+
+# Or manually trigger via GitHub Actions UI
+# Go to: https://github.com/leewsimpson/mume/actions
+# Select workflow, click "Run workflow"
 ```
 
 ### Check Resource Status

@@ -11,12 +11,11 @@ E2E tests use [Playwright](https://playwright.dev/) to test complete user flows 
 ```
 tests/
 ├── e2e/
-│   ├── fixtures/         # Test fixtures (auth, database)
+│   ├── fixtures/         # Test fixtures (auth, redis)
 │   ├── mocks/            # Mock implementations (GitHub API, OAuth)
 │   ├── setup/            # Global setup and teardown
 │   ├── specs/            # Test specifications
 │   └── utils/            # Test helper utilities
-├── seed-data/            # Database seed data
 ├── .auth/                # Auth state cache (gitignored)
 ├── playwright.config.ts  # Playwright configuration
 └── package.json
@@ -24,7 +23,7 @@ tests/
 
 ## Prerequisites
 
-1. Docker running with PostgreSQL and Redis:
+1. Docker running with Redis:
    ```bash
    docker-compose up -d
    ```
@@ -126,14 +125,10 @@ npm run stop:servers
 - Playwright route interception mocks `/api/repositories/*` endpoints
 - Controlled test data for repositories, file trees, and content
 
-### Database (Real)
-- Uses real PostgreSQL via Docker
-- Test database: `markdown_editor_test`
-- Reset and seeded before each test run
-
 ### Redis (Real)
 - Uses real Redis via Docker
-- Session storage works normally
+- Session storage and user data
+- Reset and seeded before each test run
 
 ## Test Parallelization Strategy
 
@@ -173,8 +168,7 @@ Tests use these environment variables (set in `playwright.config.ts`):
 
 ```
 E2E_TEST_MODE=true                    # Enables test-only endpoints
-DATABASE_URL=postgresql://...         # Test database connection
-REDIS_URL=redis://localhost:6379      # Session store
+REDIS_URL=redis://localhost:6379      # Session and user data store
 GITHUB_CLIENT_ID=test-client-id       # Mock OAuth
 GITHUB_CLIENT_SECRET=test-client-secret
 ```
@@ -200,12 +194,12 @@ GITHUB_CLIENT_SECRET=test-client-secret
    import { waitForPageLoad, selectTextInEditor } from '../utils/test-helpers.js';
    ```
 
-4. For database state, use fixtures:
+4. For Redis state, use fixtures:
    ```typescript
-   import { seedTestComments, resetDatabase } from '../fixtures/database.fixture.js';
+   import { seedTestUsers, resetRedis } from '../fixtures/redis.fixture.js';
 
    test.beforeEach(async () => {
-     await resetDatabase();
+     await resetRedis();
      await seedTestUsers();
    });
    ```

@@ -1,7 +1,7 @@
 import { test as base, type Page, type BrowserContext } from '@playwright/test';
 import { TEST_USERS, type MockUser } from '../mocks/github-auth.mock.js';
 import { setupGitHubApiMock, resetGitHubApiMockState } from '../mocks/github-api.mock.js';
-import { getPool } from './database.fixture.js';
+import { getUserById } from './redis.fixture.js';
 
 /**
  * Authentication fixture for E2E testing
@@ -128,12 +128,10 @@ export async function logout(page: Page): Promise<void> {
 }
 
 /**
- * Helper to get user from database
+ * Helper to get user from Redis
  */
-export async function getUserFromDb(userId: number): Promise<any> {
-  const pool = getPool();
-  const result = await pool.query('SELECT * FROM users WHERE id = $1', [userId]);
-  return result.rows[0];
+export async function getUserFromRedis(userId: number): Promise<any> {
+  return getUserById(userId);
 }
 
 // Re-export expect from base

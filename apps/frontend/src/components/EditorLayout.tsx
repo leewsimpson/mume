@@ -401,27 +401,6 @@ export function EditorLayout({
     <div className="editor-layout">
       <div className="editor-header">
         <div className="editor-header__left">
-          {/* Back/Files button */}
-          <button
-            className="btn btn--icon btn--ghost"
-            onClick={handleBackClick}
-            title="Back to files (Esc)"
-          >
-            <FontAwesomeIcon icon={faFolderOpen} />
-            <span className="btn__label">Files</span>
-          </button>
-
-          {/* New Document button */}
-          <button
-            className="btn btn--icon btn--ghost"
-            onClick={handleNewDocumentClick}
-            title="New document (Ctrl+N)"
-            disabled={isCreateModalOpen}
-          >
-            <FontAwesomeIcon icon={faPlus} />
-            <span className="btn__label">New</span>
-          </button>
-
           {/* Breadcrumb navigation */}
           <div className="editor-header__breadcrumb" data-testid="editor-breadcrumb">
             <button
@@ -467,6 +446,21 @@ export function EditorLayout({
             title="Toggle comments"
           >
             <FontAwesomeIcon icon={faComments} />
+          </button>
+          <button
+            className="btn btn--icon btn--ghost"
+            onClick={handleNewDocumentClick}
+            title="New document (Ctrl+N)"
+            disabled={isCreateModalOpen}
+          >
+            <FontAwesomeIcon icon={faPlus} />
+          </button>
+          <button
+            className="btn btn--icon btn--ghost"
+            onClick={handleBackClick}
+            title="Back to files (Esc)"
+          >
+            <FontAwesomeIcon icon={faFolderOpen} />
           </button>
           <UserPresence awareness={awareness} />
         </div>

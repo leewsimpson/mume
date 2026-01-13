@@ -1,4 +1,4 @@
-import { closePool } from '../fixtures/database.fixture.js';
+import { closeRedisClient } from '../fixtures/redis.fixture.js';
 
 /**
  * Global teardown for Playwright tests
@@ -9,8 +9,8 @@ async function globalTeardown(): Promise<void> {
   console.log('🧹 Running global teardown...');
 
   try {
-    await closePool();
-    console.log('✅ Database connections closed');
+    await closeRedisClient();
+    console.log('✅ Redis connections closed');
     console.log('🎉 Global teardown complete!');
   } catch (error) {
     console.error('❌ Global teardown failed:', error);

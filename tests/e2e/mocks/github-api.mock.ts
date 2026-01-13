@@ -289,6 +289,32 @@ This demonstrates more advanced markdown features.
 let fileUpdates: Map<string, { content: string; sha: string; message: string }> = new Map();
 let createdFiles: Map<string, { content: string; sha: string; message: string }> = new Map();
 
+// Track comments for testing (stored as mock comment data keyed by filePath)
+interface MockComment {
+  id: string;
+  charStart: number;
+  charEnd: number;
+  author: { username: string; avatarUrl: string };
+  text: string;
+  resolved: boolean;
+  createdAt: string;
+  updatedAt: string;
+  replies: Array<{
+    id: string;
+    author: { username: string; avatarUrl: string };
+    text: string;
+    createdAt: string;
+  }>;
+}
+
+interface MockCommentData {
+  version: number;
+  documentPath: string;
+  comments: MockComment[];
+}
+
+let mockComments: Map<string, MockCommentData> = new Map();
+
 /**
  * Setup GitHub API mocking for backend routes
  * This intercepts our backend's API routes and returns mock data
@@ -438,6 +464,261 @@ export async function setupGitHubApiMock(page: Page): Promise<void> {
       await route.continue();
     }
   });
+
+  // Mock comments GET
+  await page.route(`${apiBaseUrl}/api/repositories/*/*/comments*`, async (route: Route) => {
+    const url = new URL(route.request().url());
+    const filePath = url.searchParams.get('filePath') || '';
+    const commentsKey = filePath;
+    
+    const commentData = mockComments.get(commentsKey);
+    
+    if (commentData) {
+      // Convert to API format
+      const apiComments = commentData.comments.map((c) => ({
+        id: c.id,
+        documentPath: commentData.documentPath,
+        repoOwner: 'alice-test',
+        repoName: 'test-docs',
+        charStart: c.charStart,
+        charEnd: c.charEnd,
+        text: c.text,
+        resolved: c.resolved,
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt,
+        userId: 1,
+        user: {
+          id: 1,
+          username: c.author.username,
+          avatarUrl: c.author.avatarUrl,
+        },
+        replies: c.replies.map((r) => ({
+          id: r.id,
+          commentId: c.id,
+          userId: 1,
+          text: r.text,
+          createdAt: r.createdAt,
+          updatedAt: r.createdAt,
+          user: {
+            id: 1,
+            username: r.author.username,
+            avatarUrl: r.author.avatarUrl,
+          },
+        })),
+      }));
+      
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(apiComments),
+      });
+    } else {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([]),
+      });
+    }
+  });
+
+  // Mock comment creation POST
+  await page.route(`${apiBaseUrl}/api/comments`, async (route: Route) => {
+    if (route.request().method() === 'POST') {
+      const body = route.request().postDataJSON();
+      const { documentPath, repoOwner, repoName, charStart, charEnd, text } = body;
+      const commentsKey = documentPath;
+      
+      let commentData = mockComments.get(commentsKey);
+      if (!commentData) {
+        commentData = {
+          version: 1,
+          documentPath,
+          comments: [],
+        };
+      }
+      
+      const newComment: MockComment = {
+        id: `c-${Date.now()}`,
+        charStart,
+        charEnd,
+        author: { username: 'alice-test', avatarUrl: 'https://avatars.githubusercontent.com/u/12345' },
+        text,
+        resolved: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        replies: [],
+      };
+      
+      commentData.comments.push(newComment);
+      mockComments.set(commentsKey, commentData);
+      
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: newComment.id,
+          documentPath,
+          repoOwner,
+          repoName,
+          charStart,
+          charEnd,
+          text,
+          resolved: false,
+          createdAt: newComment.createdAt,
+          updatedAt: newComment.updatedAt,
+          userId: 1,
+          user: {
+            id: 1,
+            username: newComment.author.username,
+            avatarUrl: newComment.author.avatarUrl,
+          },
+          replies: [],
+        }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // Mock comment replies POST
+  await page.route(`${apiBaseUrl}/api/comments/*/replies`, async (route: Route) => {
+    if (route.request().method() === 'POST') {
+      const url = route.request().url();
+      const commentIdMatch = url.match(/\/api\/comments\/([^/]+)\/replies/);
+      const commentId = commentIdMatch?.[1];
+      
+      const body = route.request().postDataJSON();
+      const { text, documentPath } = body;
+      
+      const commentData = mockComments.get(documentPath);
+      if (commentData) {
+        const comment = commentData.comments.find((c) => c.id === commentId);
+        if (comment) {
+          const reply = {
+            id: `r-${Date.now()}`,
+            author: { username: 'alice-test', avatarUrl: 'https://avatars.githubusercontent.com/u/12345' },
+            text,
+            createdAt: new Date().toISOString(),
+          };
+          comment.replies.push(reply);
+          
+          await route.fulfill({
+            status: 201,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              id: reply.id,
+              commentId,
+              userId: 1,
+              text,
+              createdAt: reply.createdAt,
+              updatedAt: reply.createdAt,
+              user: {
+                id: 1,
+                username: reply.author.username,
+                avatarUrl: reply.author.avatarUrl,
+              },
+            }),
+          });
+          return;
+        }
+      }
+      
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Comment not found' }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
+
+  // Mock comment PATCH (resolve/unresolve)
+  await page.route(`${apiBaseUrl}/api/comments/*`, async (route: Route) => {
+    const method = route.request().method();
+    const url = route.request().url();
+    
+    // Skip if this is the replies endpoint
+    if (url.includes('/replies')) {
+      await route.continue();
+      return;
+    }
+    
+    if (method === 'PATCH') {
+      const commentIdMatch = url.match(/\/api\/comments\/([^/?]+)/);
+      const commentId = commentIdMatch?.[1];
+      
+      const body = route.request().postDataJSON();
+      const { resolved, documentPath } = body;
+      
+      const commentData = mockComments.get(documentPath);
+      if (commentData) {
+        const comment = commentData.comments.find((c) => c.id === commentId);
+        if (comment) {
+          comment.resolved = resolved;
+          comment.updatedAt = new Date().toISOString();
+          
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              id: comment.id,
+              documentPath,
+              charStart: comment.charStart,
+              charEnd: comment.charEnd,
+              text: comment.text,
+              resolved: comment.resolved,
+              createdAt: comment.createdAt,
+              updatedAt: comment.updatedAt,
+              userId: 1,
+              user: {
+                id: 1,
+                username: comment.author.username,
+                avatarUrl: comment.author.avatarUrl,
+              },
+              replies: comment.replies,
+            }),
+          });
+          return;
+        }
+      }
+      
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Comment not found' }),
+      });
+    } else if (method === 'DELETE') {
+      const commentIdMatch = url.match(/\/api\/comments\/([^/?]+)/);
+      const commentId = commentIdMatch?.[1];
+      
+      const urlObj = new URL(url);
+      const documentPath = urlObj.searchParams.get('documentPath') || '';
+      
+      const commentData = mockComments.get(documentPath);
+      if (commentData) {
+        const index = commentData.comments.findIndex((c) => c.id === commentId);
+        if (index !== -1) {
+          commentData.comments.splice(index, 1);
+          
+          await route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({ success: true, message: 'Comment deleted' }),
+          });
+          return;
+        }
+      }
+      
+      await route.fulfill({
+        status: 404,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Comment not found' }),
+      });
+    } else {
+      await route.continue();
+    }
+  });
 }
 
 /**
@@ -446,6 +727,7 @@ export async function setupGitHubApiMock(page: Page): Promise<void> {
 export function resetGitHubApiMockState(): void {
   fileUpdates.clear();
   createdFiles.clear();
+  mockComments.clear();
 }
 
 /**
@@ -474,4 +756,40 @@ export function addMockRepository(repo: MockRepository): void {
  */
 export function addMockFile(path: string, content: MockFileContent): void {
   TEST_FILES[path] = content;
+}
+
+/**
+ * Seed mock comments for testing
+ */
+export function seedMockComments(
+  filePath: string,
+  userId: number,
+  username: string = 'alice-test',
+  avatarUrl: string = 'https://avatars.githubusercontent.com/u/12345'
+): void {
+  const commentData: MockCommentData = {
+    version: 1,
+    documentPath: filePath,
+    comments: [
+      {
+        id: `c-test-${Date.now()}`,
+        charStart: 10,
+        charEnd: 50,
+        author: { username, avatarUrl },
+        text: 'This is a seeded test comment',
+        resolved: false,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        replies: [],
+      },
+    ],
+  };
+  mockComments.set(filePath, commentData);
+}
+
+/**
+ * Get mock comments for testing
+ */
+export function getMockComments(filePath: string): MockCommentData | undefined {
+  return mockComments.get(filePath);
 }

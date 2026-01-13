@@ -209,13 +209,11 @@ test.describe('US-MVP-012: Comment Highlighting', () => {
   const editorUrl = '/repositories/alice-test/test-docs/edit/README.md';
 
   test('should highlight text ranges with comments', async ({ authenticatedPage, currentUser }) => {
+    // Seed comments via mock
+    const { seedMockComments } = await import('../mocks/github-api.mock.js');
+    seedMockComments('README.md', currentUser.id, currentUser.username);
+
     await authenticatedPage.goto(editorUrl);
-
-    // Add test comments via seed
-    const { seedTestComments } = await import('../fixtures/database.fixture.js');
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-
-    await authenticatedPage.reload();
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     // Should show comment highlights
@@ -227,12 +225,11 @@ test.describe('US-MVP-012: Comment Highlighting', () => {
     authenticatedPage,
     currentUser,
   }) => {
+    // Seed comments via mock
+    const { seedMockComments } = await import('../mocks/github-api.mock.js');
+    seedMockComments('README.md', currentUser.id, currentUser.username);
+
     await authenticatedPage.goto(editorUrl);
-
-    const { seedTestComments } = await import('../fixtures/database.fixture.js');
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-
-    await authenticatedPage.reload();
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     // Click on highlighted area
@@ -251,12 +248,11 @@ test.describe('US-MVP-012: Comment Highlighting', () => {
     authenticatedPage,
     currentUser,
   }) => {
+    // Seed comments via mock
+    const { seedMockComments } = await import('../mocks/github-api.mock.js');
+    seedMockComments('README.md', currentUser.id, currentUser.username);
+
     await authenticatedPage.goto(editorUrl);
-
-    const { seedTestComments } = await import('../fixtures/database.fixture.js');
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-
-    await authenticatedPage.reload();
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     // Resolved highlight should have different style

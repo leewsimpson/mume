@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import type { SessionUser } from '../config/passport.js';
-import pool from '../db/connection.js';
+import { redisUserService } from '../server.js';
 import { decryptToken } from '../services/token.service.js';
 
 /**
@@ -28,22 +28,13 @@ export async function validateGitHubToken(
   const user = req.user as SessionUser;
 
   try {
-    // Fetch encrypted token from database
-    const result = await pool.query(
-      `SELECT access_token_encrypted, access_token_iv, access_token_auth_tag
-       FROM user_tokens
-       WHERE user_id = $1 AND provider = $2
-       ORDER BY created_at DESC
-       LIMIT 1`,
-      [user.id, 'github']
-    );
+    // Fetch encrypted token from Redis
+    const tokenData = await redisUserService.getToken(user.id.toString());
 
-    if (result.rows.length === 0) {
+    if (!tokenData) {
       res.status(401).json({ error: 'GitHub token not found. Please re-authenticate.' });
       return;
     }
-
-    const tokenData = result.rows[0];
 
     // In E2E test mode, use mock token without decryption
     // This avoids encryption/decryption issues with test seed data
@@ -53,9 +44,9 @@ export async function validateGitHubToken(
     } else {
       // Decrypt the token for production use
       githubToken = decryptToken({
-        encryptedData: tokenData.access_token_encrypted,
-        iv: tokenData.access_token_iv,
-        authTag: tokenData.access_token_auth_tag,
+        encryptedData: tokenData.accessTokenEncrypted,
+        iv: tokenData.accessTokenIv,
+        authTag: tokenData.accessTokenAuthTag,
       });
     }
 

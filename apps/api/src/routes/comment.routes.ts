@@ -1,10 +1,13 @@
 import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/authenticate.js';
 import { validateGitHubToken } from '../middleware/validateGitHubToken.js';
-import pool from '../db/connection.js';
+import { GitHubService } from '../services/github.service.js';
+import { CommentFileService } from '../services/comment-file.service.js';
 import type { SessionUser } from '../config/passport.js';
 
 const router = Router();
+const githubService = new GitHubService();
+const commentFileService = new CommentFileService();
 
 /**
  * POST /api/comments
@@ -19,6 +22,7 @@ router.post(
       const { documentPath, repoOwner, repoName, charStart, charEnd, text } = req.body;
       const user = req.user as SessionUser;
       const userId = user?.id;
+      const githubToken = res.locals.githubToken;
 
       // Validation
       if (!documentPath || !repoOwner || !repoName || charStart === undefined || charEnd === undefined || !text) {
@@ -45,37 +49,62 @@ router.post(
         });
       }
 
-      // Insert comment into database
-      const result = await pool.query(
-        `INSERT INTO comments (user_id, document_path, repo_owner, repo_name, char_start, char_end, text, resolved, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, false, NOW(), NOW())
-         RETURNING id, user_id, document_path, repo_owner, repo_name, char_start, char_end, text, resolved, created_at, updated_at`,
-        [userId, documentPath, repoOwner, repoName, charStart, charEnd, text.trim()]
+      // Fetch or create comment file
+      const existingFile = await githubService.getCommentFile(
+        repoOwner,
+        repoName,
+        documentPath,
+        githubToken,
+        req.logger
       );
 
-      const comment = result.rows[0];
+      let commentData = existingFile
+        ? commentFileService.parseCommentFile(existingFile.content, req.logger)
+        : commentFileService.createEmptyCommentFile(documentPath);
 
-      // Fetch user info to include in response
-      const userResult = await pool.query(
-        'SELECT id, username, avatar_url FROM users WHERE id = $1',
-        [userId]
+      // Add comment
+      const { data: updatedData, commentId } = commentFileService.addComment(commentData, {
+        charStart,
+        charEnd,
+        author: {
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+        },
+        text: text.trim(),
+        resolved: false,
+      });
+
+      // Serialize and save
+      const fileContent = commentFileService.serializeCommentFile(updatedData);
+      await githubService.saveCommentFile(
+        repoOwner,
+        repoName,
+        documentPath,
+        fileContent,
+        existingFile?.sha || null,
+        `Add comment on ${documentPath}`,
+        githubToken,
+        req.logger
       );
 
-      const commentWithUser = {
-        ...comment,
-        user: userResult.rows[0]
-      };
+      const newComment = commentFileService.getComment(updatedData, commentId);
 
       req.logger?.info('Comment created successfully', {
         userId,
-        commentId: comment.id,
+        commentId,
         repoOwner,
         repoName,
         documentPath,
         operation: 'create_comment'
       });
 
-      res.status(201).json(commentWithUser);
+      // Return in API format for backward compatibility
+      const apiComment = commentFileService.convertToApiFormat(newComment!, userId);
+      apiComment.documentPath = documentPath;
+      apiComment.repoOwner = repoOwner;
+      apiComment.repoName = repoName;
+
+      res.status(201).json(apiComment);
     } catch (error) {
       req.logger?.error('Failed to create comment', error as Error, {
         userId: (req.user as SessionUser)?.id,
@@ -96,10 +125,11 @@ router.post(
   validateGitHubToken,
   async (req: Request, res: Response) => {
     try {
-      const { commentId } = req.params;
-      const { text } = req.body;
+      const commentId = req.params.commentId!;
+      const { text, documentPath, repoOwner, repoName } = req.body;
       const user = req.user as SessionUser;
       const userId = user?.id;
+      const githubToken = res.locals.githubToken;
 
       // Validation
       if (!text || !text.trim()) {
@@ -108,47 +138,88 @@ router.post(
         });
       }
 
-      // Check if parent comment exists
-      const commentCheck = await pool.query(
-        'SELECT id FROM comments WHERE id = $1',
-        [commentId]
+      if (!documentPath || !repoOwner || !repoName) {
+        return res.status(400).json({
+          error: 'Missing required fields: documentPath, repoOwner, repoName'
+        });
+      }
+
+      // TypeScript: These are validated above
+      const validatedDocPath = documentPath as string;
+      const validatedRepoOwner = repoOwner as string;
+      const validatedRepoName = repoName as string;
+
+      // Fetch comment file
+      const existingFile = await githubService.getCommentFile(
+        validatedRepoOwner,
+        validatedRepoName,
+        validatedDocPath,
+        githubToken,
+        req.logger
       );
 
-      if (commentCheck.rows.length === 0) {
+      if (!existingFile) {
+        return res.status(404).json({
+          error: 'Comment file not found'
+        });
+      }
+
+      const commentData = commentFileService.parseCommentFile(existingFile.content, req.logger);
+
+      // Check if comment exists
+      const comment = commentFileService.getComment(commentData, commentId);
+      if (!comment) {
         return res.status(404).json({
           error: 'Comment not found'
         });
       }
 
-      // Insert reply into database
-      const result = await pool.query(
-        `INSERT INTO comment_replies (comment_id, user_id, text, created_at, updated_at)
-         VALUES ($1, $2, $3, NOW(), NOW())
-         RETURNING id, comment_id, user_id, text, created_at, updated_at`,
-        [commentId, userId, text.trim()]
+      // Add reply
+      const { data: updatedData, replyId } = commentFileService.addReply(commentData, commentId, {
+        author: {
+          username: user.username,
+          avatarUrl: user.avatarUrl,
+        },
+        text: text.trim(),
+      });
+
+      // Serialize and save
+      const fileContent = commentFileService.serializeCommentFile(updatedData);
+      await githubService.saveCommentFile(
+        validatedRepoOwner,
+        validatedRepoName,
+        validatedDocPath,
+        fileContent,
+        existingFile.sha,
+        `Add reply to comment on ${validatedDocPath}`,
+        githubToken,
+        req.logger
       );
 
-      const reply = result.rows[0];
-
-      // Fetch user info to include in response
-      const userResult = await pool.query(
-        'SELECT id, username, avatar_url FROM users WHERE id = $1',
-        [userId]
-      );
-
-      const replyWithUser = {
-        ...reply,
-        user: userResult.rows[0]
-      };
+      const updatedComment = commentFileService.getComment(updatedData, commentId);
+      const reply = updatedComment!.replies.find((r) => r.id === replyId);
 
       req.logger?.info('Reply created successfully', {
         userId,
         commentId,
-        replyId: reply.id,
+        replyId,
         operation: 'create_reply'
       });
 
-      res.status(201).json(replyWithUser);
+      // Return in API format
+      res.status(201).json({
+        id: reply!.id,
+        commentId,
+        userId,
+        text: reply!.text,
+        createdAt: reply!.createdAt,
+        updatedAt: reply!.createdAt,
+        user: {
+          id: userId,
+          username: reply!.author.username,
+          avatarUrl: reply!.author.avatarUrl,
+        },
+      });
     } catch (error) {
       req.logger?.error('Failed to create reply', error as Error, {
         userId: (req.user as SessionUser)?.id,
@@ -170,8 +241,9 @@ router.patch(
   validateGitHubToken,
   async (req: Request, res: Response) => {
     try {
-      const { commentId } = req.params;
-      const { resolved } = req.body;
+      const commentId = req.params.commentId!;
+      const { resolved, documentPath, repoOwner, repoName } = req.body;
+      const githubToken = res.locals.githubToken;
 
       // Validation
       if (typeof resolved !== 'boolean') {
@@ -180,28 +252,59 @@ router.patch(
         });
       }
 
-      // Check if comment exists
-      const commentCheck = await pool.query(
-        'SELECT id FROM comments WHERE id = $1',
-        [commentId]
+      if (!documentPath || !repoOwner || !repoName) {
+        return res.status(400).json({
+          error: 'Missing required fields: documentPath, repoOwner, repoName'
+        });
+      }
+
+      // TypeScript: These are validated above
+      const validatedDocPath = documentPath as string;
+      const validatedRepoOwner = repoOwner as string;
+      const validatedRepoName = repoName as string;
+
+      // Fetch comment file
+      const existingFile = await githubService.getCommentFile(
+        validatedRepoOwner,
+        validatedRepoName,
+        validatedDocPath,
+        githubToken,
+        req.logger
       );
 
-      if (commentCheck.rows.length === 0) {
+      if (!existingFile) {
+        return res.status(404).json({
+          error: 'Comment file not found'
+        });
+      }
+
+      const commentData = commentFileService.parseCommentFile(existingFile.content, req.logger);
+
+      // Check if comment exists
+      const comment = commentFileService.getComment(commentData, commentId);
+      if (!comment) {
         return res.status(404).json({
           error: 'Comment not found'
         });
       }
 
-      // Update comment
-      const result = await pool.query(
-        `UPDATE comments
-         SET resolved = $1, updated_at = NOW()
-         WHERE id = $2
-         RETURNING id, user_id, document_path, repo_owner, repo_name, char_start, char_end, text, resolved, created_at, updated_at`,
-        [resolved, commentId]
+      // Update resolved status
+      const updatedData = commentFileService.updateCommentResolved(commentData, commentId, resolved);
+
+      // Serialize and save
+      const fileContent = commentFileService.serializeCommentFile(updatedData);
+      await githubService.saveCommentFile(
+        validatedRepoOwner,
+        validatedRepoName,
+        validatedDocPath,
+        fileContent,
+        existingFile.sha,
+        resolved ? `Resolve comment on ${validatedDocPath}` : `Unresolve comment on ${validatedDocPath}`,
+        githubToken,
+        req.logger
       );
 
-      const comment = result.rows[0];
+      const updatedComment = commentFileService.getComment(updatedData, commentId);
 
       req.logger?.info('Comment updated successfully', {
         userId: (req.user as SessionUser)?.id,
@@ -210,7 +313,13 @@ router.patch(
         operation: 'update_comment'
       });
 
-      res.json(comment);
+      // Return in API format
+      const apiComment = commentFileService.convertToApiFormat(updatedComment!, (req.user as SessionUser).id);
+      apiComment.documentPath = validatedDocPath;
+      apiComment.repoOwner = validatedRepoOwner;
+      apiComment.repoName = validatedRepoName;
+
+      res.json(apiComment);
     } catch (error) {
       req.logger?.error('Failed to update comment', error as Error, {
         userId: (req.user as SessionUser)?.id,
@@ -232,35 +341,69 @@ router.delete(
   validateGitHubToken,
   async (req: Request, res: Response) => {
     try {
-      const { commentId } = req.params;
+      const commentId = req.params.commentId!;
+      const { documentPath, repoOwner, repoName } = req.query;
       const user = req.user as SessionUser;
       const userId = user?.id;
+      const githubToken = res.locals.githubToken;
 
-      // Check if comment exists and get user_id
-      const commentCheck = await pool.query(
-        'SELECT id, user_id FROM comments WHERE id = $1',
-        [commentId]
+      if (!documentPath || !repoOwner || !repoName) {
+        return res.status(400).json({
+          error: 'Missing required query parameters: documentPath, repoOwner, repoName'
+        });
+      }
+
+      // TypeScript: These are validated above
+      const validatedDocPath = documentPath as string;
+      const validatedRepoOwner = repoOwner as string;
+      const validatedRepoName = repoName as string;
+
+      // Fetch comment file
+      const existingFile = await githubService.getCommentFile(
+        validatedRepoOwner,
+        validatedRepoName,
+        validatedDocPath,
+        githubToken,
+        req.logger
       );
 
-      if (commentCheck.rows.length === 0) {
+      if (!existingFile) {
+        return res.status(404).json({
+          error: 'Comment file not found'
+        });
+      }
+
+      const commentData = commentFileService.parseCommentFile(existingFile.content, req.logger);
+
+      // Check if comment exists
+      const comment = commentFileService.getComment(commentData, commentId);
+      if (!comment) {
         return res.status(404).json({
           error: 'Comment not found'
         });
       }
 
-      const comment = commentCheck.rows[0];
-
       // Verify user is the author
-      if (comment.user_id !== userId) {
+      if (comment.author.username !== user.username) {
         return res.status(403).json({
           error: 'You can only delete your own comments'
         });
       }
 
-      // Delete comment (CASCADE will delete associated replies)
-      await pool.query(
-        'DELETE FROM comments WHERE id = $1',
-        [commentId]
+      // Delete comment
+      const updatedData = commentFileService.deleteComment(commentData, commentId);
+
+      // Serialize and save
+      const fileContent = commentFileService.serializeCommentFile(updatedData);
+      await githubService.saveCommentFile(
+        validatedRepoOwner,
+        validatedRepoName,
+        validatedDocPath,
+        fileContent,
+        existingFile.sha,
+        `Delete comment on ${validatedDocPath}`,
+        githubToken,
+        req.logger
       );
 
       req.logger?.info('Comment deleted successfully', {

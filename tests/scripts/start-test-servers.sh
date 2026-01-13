@@ -3,7 +3,12 @@
 # Exit on error
 set -e
 
+# Get the absolute path to the repository root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
 echo "🚀 Starting test servers..."
+echo "   Repository root: $REPO_ROOT"
 
 # Kill any existing test servers
 pkill -f "E2E_TEST_MODE=true" 2>/dev/null || true
@@ -12,9 +17,8 @@ sleep 2
 
 # Start backend with E2E_TEST_MODE
 echo "📦 Starting backend (E2E mode)..."
-cd "$(dirname "$0")/../../apps/api"
+cd "$REPO_ROOT/apps/api"
 E2E_TEST_MODE=true \
-  DATABASE_URL=postgresql://postgres:postgres@localhost:5432/markdown_editor_test \
   REDIS_URL=redis://localhost:6379 \
   PORT=3000 \
   FRONTEND_URL=http://localhost:5173 \
@@ -30,7 +34,7 @@ echo "✅ Backend started (PID: $BACKEND_PID)"
 
 # Start frontend
 echo "🎨 Starting frontend..."
-cd "$(dirname "$0")/../../apps/frontend"
+cd "$REPO_ROOT/apps/frontend"
 nohup npm run dev > /tmp/test-frontend.log 2>&1 &
 FRONTEND_PID=$!
 echo $FRONTEND_PID > /tmp/test-frontend.pid

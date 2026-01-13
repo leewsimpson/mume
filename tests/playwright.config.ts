@@ -98,7 +98,6 @@ export default defineConfig({
         NODE_ENV: 'test',
         PORT: '3000',
         FRONTEND_URL: 'http://localhost:5173',
-        DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/markdown_editor_test',
         REDIS_URL: 'redis://localhost:6379',
         SESSION_SECRET: 'test-session-secret-for-e2e-testing',
         TOKEN_ENCRYPTION_KEY: 'a'.repeat(64), // 32-byte key in hex

@@ -4,10 +4,11 @@ import { documentStateService } from '../services/documentState.service.js';
 import { authenticate } from '../middleware/authenticate.js';
 import { validateGitHubToken } from '../middleware/validateGitHubToken.js';
 import type { SessionUser } from '../config/passport.js';
-import pool from '../db/connection.js';
+import { CommentFileService } from '../services/comment-file.service.js';
 
 const router = Router();
 const githubService = new GitHubService();
+const commentFileService = new CommentFileService();
 
 // Apply authentication middleware to all repository routes
 router.use(authenticate);
@@ -377,6 +378,7 @@ router.get('/:owner/:repo/comments', async (req, res) => {
   try {
     const { owner, repo } = req.params;
     const filePath = req.query.filePath as string;
+    const githubToken = res.locals.githubToken;
 
     req.logger?.info('Fetching comments', {
       owner,
@@ -390,94 +392,40 @@ router.get('/:owner/:repo/comments', async (req, res) => {
       return res.status(400).json({ error: 'File path query parameter is required' });
     }
 
-    // Fetch comments with user information
-    const result = await pool.query(
-      `SELECT c.id, c.user_id, c.document_path, c.repo_owner, c.repo_name,
-              c.char_start, c.char_end, c.text, c.resolved, c.created_at, c.updated_at,
-              u.username, u.avatar_url
-       FROM comments c
-       JOIN users u ON c.user_id = u.id
-       WHERE c.repo_owner = $1 AND c.repo_name = $2 AND c.document_path = $3
-       ORDER BY c.char_start ASC, c.created_at ASC`,
-      [owner, repo, filePath]
+    // Fetch comment file from GitHub
+    const commentFile = await githubService.getCommentFile(
+      owner,
+      repo,
+      filePath,
+      githubToken,
+      req.logger
     );
 
-    // Fetch all replies for these comments
-    const commentIds = result.rows.map((row: { id: number }) => row.id);
-    const repliesMap = new Map<number, Array<{
-      id: number;
-      commentId: number;
-      userId: number;
-      text: string;
-      createdAt: Date;
-      updatedAt: Date;
-      user: { id: number; username: string; avatarUrl: string };
-    }>>();
-
-    if (commentIds.length > 0) {
-      const repliesResult = await pool.query(
-        `SELECT r.id, r.comment_id, r.user_id, r.text, r.created_at, r.updated_at,
-                u.username, u.avatar_url
-         FROM comment_replies r
-         JOIN users u ON r.user_id = u.id
-         WHERE r.comment_id = ANY($1)
-         ORDER BY r.created_at ASC`,
-        [commentIds]
-      );
-
-      for (const reply of repliesResult.rows) {
-        if (!repliesMap.has(reply.comment_id)) {
-          repliesMap.set(reply.comment_id, []);
-        }
-        repliesMap.get(reply.comment_id)!.push({
-          id: reply.id,
-          commentId: reply.comment_id,
-          userId: reply.user_id,
-          text: reply.text,
-          createdAt: reply.created_at,
-          updatedAt: reply.updated_at,
-          user: {
-            id: reply.user_id,
-            username: reply.username,
-            avatarUrl: reply.avatar_url
-          }
-        });
-      }
+    // If no comment file exists, return empty array
+    if (!commentFile) {
+      req.logger?.info('No comments found (file does not exist)', {
+        owner,
+        repo,
+        filePath,
+        operation: 'fetch_comments'
+      });
+      return res.json([]);
     }
 
-    const comments = result.rows.map((row: {
-      id: number;
-      user_id: number;
-      document_path: string;
-      repo_owner: string;
-      repo_name: string;
-      char_start: number;
-      char_end: number;
-      text: string;
-      resolved: boolean;
-      created_at: Date;
-      updated_at: Date;
-      username: string;
-      avatar_url: string;
-    }) => ({
-      id: row.id,
-      userId: row.user_id,
-      documentPath: row.document_path,
-      repoOwner: row.repo_owner,
-      repoName: row.repo_name,
-      charStart: row.char_start,
-      charEnd: row.char_end,
-      text: row.text,
-      resolved: row.resolved,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-      user: {
-        id: row.user_id,
-        username: row.username,
-        avatarUrl: row.avatar_url
-      },
-      replies: repliesMap.get(row.id) || []
-    }));
+    // Parse comment file
+    const commentData = commentFileService.parseCommentFile(commentFile.content, req.logger);
+
+    // Convert to API format
+    const comments = commentData.comments.map((comment) => {
+      // Use a default userId of 0 since we no longer have user IDs in Redis
+      // Frontend only needs username and avatarUrl which are in the comment
+      const userId = 0;
+      const apiComment = commentFileService.convertToApiFormat(comment, userId);
+      apiComment.documentPath = filePath;
+      apiComment.repoOwner = owner;
+      apiComment.repoName = repo;
+      return apiComment;
+    });
 
     req.logger?.info('Comments fetched successfully', {
       owner,

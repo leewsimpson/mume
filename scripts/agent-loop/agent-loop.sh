@@ -74,7 +74,7 @@ for i in $(seq 1 $MAX_ITERATIONS); do
   
   # Run Claude and send detailed output to stream.txt (not console)
   # Use input redirection instead of pipe to avoid streaming mode
-  claude --dangerously-skip-permissions < "$SCRIPT_DIR/prompt.md" >> "$STREAM_FILE" 2>&1 || true
+  opencode < "$SCRIPT_DIR/prompt.md" >> "$STREAM_FILE" 2>&1 || true
   
   # Read last part of stream to check for completion signal
   OUTPUT=$(tail -n 100 "$STREAM_FILE")

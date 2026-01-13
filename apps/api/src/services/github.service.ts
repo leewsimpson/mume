@@ -557,4 +557,82 @@ export class GitHubService {
     this.repoCache.clear();
     this.treeCache.clear();
   }
+
+  /**
+   * Get comment file for a document
+   * Comments are stored in .mume folder at repo root, preserving path structure.
+   * Example: "docs/guide.md" → ".mume/docs/guide.md"
+   * Returns null if the comment file doesn't exist (404)
+   */
+  async getCommentFile(
+    owner: string,
+    repo: string,
+    documentPath: string,
+    token: string,
+    logger?: Logger
+  ): Promise<{ content: string; sha: string } | null> {
+    // Comment files are stored in .mume folder with same path structure
+    const commentFilePath = `.mume/${documentPath}`;
+
+    logger?.info('Fetching comment file from GitHub', {
+      operation: 'getCommentFile',
+      owner,
+      repo,
+      documentPath,
+      commentFilePath,
+    });
+
+    try {
+      return await this.getFileContent(owner, repo, commentFilePath, token, logger);
+    } catch (error: any) {
+      // Return null if file doesn't exist (404)
+      if (error?.status === 404) {
+        logger?.info('Comment file does not exist', {
+          operation: 'getCommentFile',
+          owner,
+          repo,
+          commentFilePath,
+        });
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Save comment file for a document
+   * Comments are stored in .mume folder at repo root, preserving path structure.
+   * Example: "docs/guide.md" → ".mume/docs/guide.md"
+   * Creates the file if it doesn't exist, updates if it does
+   */
+  async saveCommentFile(
+    owner: string,
+    repo: string,
+    documentPath: string,
+    content: string,
+    sha: string | null,
+    message: string,
+    token: string,
+    logger?: Logger
+  ): Promise<{ sha: string; commit: string }> {
+    // Comment files are stored in .mume folder with same path structure
+    const commentFilePath = `.mume/${documentPath}`;
+
+    logger?.info('Saving comment file to GitHub', {
+      operation: 'saveCommentFile',
+      owner,
+      repo,
+      documentPath,
+      commentFilePath,
+      hasSha: !!sha,
+    });
+
+    if (sha) {
+      // Update existing file
+      return await this.updateFile(owner, repo, commentFilePath, content, sha, message, token, logger);
+    } else {
+      // Create new file
+      return await this.createFile(owner, repo, commentFilePath, content, message, token, logger);
+    }
+  }
 }

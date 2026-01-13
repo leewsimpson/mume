@@ -10,10 +10,14 @@ import { createClient } from 'redis';
 import passport from 'passport';
 import { configurePassport, validateOAuthConfig } from './config/passport.js';
 import { validateEncryptionKey } from './services/token.service.js';
+import { RedisUserService } from './services/redis-user.service.js';
 import authRoutes from './routes/auth.routes.js';
 import repositoryRoutes from './routes/repository.routes.js';
 import commentRoutes from './routes/comment.routes.js';
 import { startGitHubSyncJob, stopGitHubSyncJob } from './jobs/githubSync.job.js';
+
+// Global Redis user service instance
+export let redisUserService: RedisUserService;
 
 // Environment configuration
 const PORT = process.env.PORT ?? '3000';
@@ -69,6 +73,10 @@ async function bootstrap() {
     console.error('❌ Failed to connect to Redis:', errorMessage);
     throw new Error(`Redis connection failed: ${errorMessage}`);
   }
+
+  // Initialize Redis user service
+  redisUserService = new RedisUserService(redisClient);
+  console.log('✅ Redis user service initialized');
 
   // Configure session with Redis store
   app.use(

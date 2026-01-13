@@ -323,7 +323,7 @@ export function CreateDocumentModal({
           left: 0;
           right: 0;
           bottom: 0;
-          background-color: rgba(0, 0, 0, 0.5);
+          background-color: rgba(0, 0, 0, 0.7);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -331,28 +331,29 @@ export function CreateDocumentModal({
         }
 
         .modal-content {
-          background: white;
-          border-radius: 8px;
+          background: var(--color-bg-secondary);
+          border: 1px solid var(--color-border-default);
+          border-radius: var(--radius-lg);
           max-width: 600px;
           width: 90%;
           max-height: 80vh;
           overflow-y: auto;
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+          box-shadow: var(--shadow-lg);
         }
 
         .modal-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          padding: 1.5rem;
-          border-bottom: 1px solid #e5e7eb;
+          padding: var(--space-5);
+          border-bottom: 1px solid var(--color-border-default);
         }
 
         .modal-header h2 {
           margin: 0;
           font-size: 1.5rem;
           font-weight: 600;
-          color: #111827;
+          color: var(--color-text-primary);
         }
 
         .close-button {
@@ -360,7 +361,7 @@ export function CreateDocumentModal({
           border: none;
           font-size: 1.5rem;
           cursor: pointer;
-          color: #6b7280;
+          color: var(--color-text-secondary);
           padding: 0;
           width: 2rem;
           height: 2rem;
@@ -370,7 +371,7 @@ export function CreateDocumentModal({
         }
 
         .close-button:hover:not(:disabled) {
-          color: #111827;
+          color: var(--color-text-primary);
         }
 
         .close-button:disabled {
@@ -379,72 +380,72 @@ export function CreateDocumentModal({
         }
 
         .modal-body {
-          padding: 1.5rem;
+          padding: var(--space-5);
         }
 
         .form-group {
-          margin-bottom: 1.5rem;
+          margin-bottom: var(--space-5);
         }
 
         .form-group label {
           display: block;
           font-weight: 500;
-          margin-bottom: 0.5rem;
-          color: #374151;
+          margin-bottom: var(--space-2);
+          color: var(--color-text-primary);
         }
 
         .label-hint {
           font-weight: normal;
           font-size: 0.875rem;
-          color: #6b7280;
-          margin-left: 0.5rem;
+          color: var(--color-text-secondary);
+          margin-left: var(--space-2);
         }
 
         .form-group input[type="text"] {
           width: 100%;
-          padding: 0.5rem;
-          border: 1px solid #d1d5db;
-          border-radius: 4px;
+          padding: var(--space-2);
+          border: 1px solid var(--color-border-default);
+          border-radius: var(--radius-sm);
           font-size: 1rem;
-          background: white;
-          color: #111827;
+          background: var(--color-bg-primary);
+          color: var(--color-text-primary);
         }
 
         .form-group input[type="text"]:focus {
           outline: none;
-          border-color: #3b82f6;
-          box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+          border-color: var(--color-accent-emphasis);
+          box-shadow: 0 0 0 3px rgba(31, 111, 235, 0.2);
         }
 
         .form-group input[type="text"]:disabled {
-          background-color: #f3f4f6;
+          background-color: var(--color-bg-tertiary);
           cursor: not-allowed;
         }
 
         .input-mode-toggle {
           display: flex;
-          gap: 0.5rem;
-          margin-bottom: 1rem;
+          gap: var(--space-2);
+          margin-bottom: var(--space-4);
         }
 
         .input-mode-toggle button {
-          padding: 0.5rem 1rem;
-          border: 1px solid #d1d5db;
-          background: white;
-          border-radius: 4px;
+          padding: var(--space-2) var(--space-4);
+          border: 1px solid var(--color-border-default);
+          background: var(--color-bg-tertiary);
+          border-radius: var(--radius-sm);
           cursor: pointer;
           font-size: 0.875rem;
-          color: #374151;
+          color: var(--color-text-secondary);
         }
 
         .input-mode-toggle button.active {
-          background: #3b82f6;
+          background: var(--color-accent-emphasis);
           color: white;
-          border-color: #3b82f6;
+          border-color: var(--color-accent-emphasis);
         }
 
         .input-mode-toggle button:not(.active):hover:not(:disabled) {
-          background: #f3f4f6;
+          background: var(--color-bg-hover);
         }
 
         .input-mode-toggle button:disabled {
@@ -455,31 +456,33 @@ export function CreateDocumentModal({
         .folder-picker {
           max-height: 200px;
           overflow-y: auto;
-          border: 1px solid #d1d5db;
-          border-radius: 4px;
-          padding: 0.5rem;
+          border: 1px solid var(--color-border-default);
+          border-radius: var(--radius-sm);
+          padding: var(--space-2);
+          background: var(--color-bg-primary);
         }
 
         .folder-item {
           display: block;
           width: 100%;
           text-align: left;
-          padding: 0.5rem;
+          padding: var(--space-2);
           border: none;
           background: none;
           cursor: pointer;
-          border-radius: 4px;
-          margin-bottom: 0.25rem;
-          color: #374151;
+          border-radius: var(--radius-sm);
+          margin-bottom: var(--space-1);
+          color: var(--color-text-secondary);
         }
 
         .folder-item:hover:not(:disabled) {
-          background: #f3f4f6;
+          background: var(--color-bg-hover);
+          color: var(--color-text-primary);
         }
 
         .folder-item.selected {
-          background: #dbeafe;
-          color: #1e40af;
+          background: rgba(31, 111, 235, 0.2);
+          color: var(--color-text-link);
         }
 
         .folder-item:disabled {
@@ -488,59 +491,61 @@ export function CreateDocumentModal({
         }
 
         .path-preview {
-          padding: 0.75rem;
-          background: #f3f4f6;
-          border-radius: 4px;
+          padding: var(--space-3);
+          background: var(--color-bg-tertiary);
+          border-radius: var(--radius-sm);
           font-size: 0.875rem;
-          margin-bottom: 1rem;
+          margin-bottom: var(--space-4);
+          color: var(--color-text-secondary);
         }
 
         .path-preview strong {
-          color: #374151;
+          color: var(--color-text-primary);
         }
 
         .error-message {
-          padding: 0.75rem;
-          background: #fef2f2;
-          color: #dc2626;
-          border-radius: 4px;
+          padding: var(--space-3);
+          background: rgba(248, 81, 73, 0.15);
+          color: var(--color-danger);
+          border-radius: var(--radius-sm);
           font-size: 0.875rem;
-          margin-bottom: 1rem;
+          margin-bottom: var(--space-4);
         }
 
         .modal-footer {
           display: flex;
           justify-content: flex-end;
-          gap: 0.75rem;
-          padding: 1.5rem;
-          border-top: 1px solid #e5e7eb;
+          gap: var(--space-3);
+          padding: var(--space-5);
+          border-top: 1px solid var(--color-border-default);
         }
 
         .button {
-          padding: 0.5rem 1rem;
-          border-radius: 4px;
+          padding: var(--space-2) var(--space-4);
+          border-radius: var(--radius-md);
           font-size: 1rem;
           cursor: pointer;
           border: none;
+          font-weight: 500;
         }
 
         .button-secondary {
-          background: white;
-          color: #374151;
-          border: 1px solid #d1d5db;
+          background: var(--color-bg-tertiary);
+          color: var(--color-text-primary);
+          border: 1px solid var(--color-border-default);
         }
 
         .button-secondary:hover:not(:disabled) {
-          background: #f3f4f6;
+          background: var(--color-bg-hover);
         }
 
         .button-primary {
-          background: #3b82f6;
+          background: var(--color-accent-emphasis);
           color: white;
         }
 
         .button-primary:hover:not(:disabled) {
-          background: #2563eb;
+          background: var(--color-accent-emphasis-hover);
         }
 
         .button:disabled {

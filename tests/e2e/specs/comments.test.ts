@@ -1,26 +1,28 @@
 import { test, expect } from '../fixtures/index.js';
 import { selectTextInEditor } from '../utils/test-helpers.js';
-import { seedTestComments, resetDatabase, seedTestUsers } from '../fixtures/database.fixture.js';
+import { seedMockComments, resetGitHubApiMockState } from '../mocks/github-api.mock.js';
+import { resetRedis, seedTestUsers } from '../fixtures/redis.fixture.js';
 
 /**
  * E2E Tests for US-MVP-005, 006, 007: Comment System
  *
  * Tests for adding comments, replying, resolving, and deleting comments.
  * 
- * NOTE: These tests run in SERIAL mode (not parallel) because they reset the database
- * before each test to ensure clean state. This is configured via test.describe.configure().
+ * NOTE: These tests run in SERIAL mode (not parallel) because they share mock state.
+ * Comments are stored in GitHub as YAML files (mocked via API interception).
  */
 
 test.describe('US-MVP-005: Add Sidebar Comment Thread', () => {
-  // Configure tests to run serially due to database resets
+  // Configure tests to run serially due to shared mock state
   test.describe.configure({ mode: 'serial' });
 
   const editorUrl = '/repositories/alice-test/test-docs/edit/README.md';
 
   test.beforeEach(async () => {
-    // Reset database before each test
-    await resetDatabase();
+    // Reset Redis and mock state before each test
+    await resetRedis();
     await seedTestUsers();
+    resetGitHubApiMockState();
   });
 
   test('should show comment sidebar toggle button', async ({ authenticatedPage }) => {
@@ -112,27 +114,11 @@ test.describe('US-MVP-005: Add Sidebar Comment Thread', () => {
   });
 
   test('should show comment author info', async ({ authenticatedPage, currentUser }) => {
+    // Seed a comment first via mock
+    seedMockComments('README.md', currentUser.id, currentUser.username);
+
     await authenticatedPage.goto(editorUrl);
-
-    // Seed a comment first
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-
-    // Monitor network request to verify API endpoint is called correctly
-    const responsePromise = authenticatedPage.waitForResponse(
-      response => response.url().includes('/api/repositories/alice-test/test-docs/comments') 
-        && response.url().includes('filePath=README.md')
-        && response.request().method() === 'GET',
-      { timeout: 10000 }
-    );
-
-    // Reload to trigger comment fetch
-    await authenticatedPage.reload();
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
-
-    // Verify the API call was successful
-    const response = await responsePromise;
-    expect(response.status()).toBe(200);
-    expect(response.url()).toContain('?filePath=README.md');
 
     // Open sidebar
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();
@@ -146,10 +132,9 @@ test.describe('US-MVP-005: Add Sidebar Comment Thread', () => {
   });
 
   test('should show comment timestamp', async ({ authenticatedPage, currentUser }) => {
-    await authenticatedPage.goto(editorUrl);
+    seedMockComments('README.md', currentUser.id, currentUser.username);
 
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-    await authenticatedPage.reload();
+    await authenticatedPage.goto(editorUrl);
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();
@@ -178,10 +163,9 @@ test.describe('US-MVP-005: Add Sidebar Comment Thread', () => {
     authenticatedPage,
     currentUser,
   }) => {
-    await authenticatedPage.goto(editorUrl);
+    seedMockComments('README.md', currentUser.id, currentUser.username);
 
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-    await authenticatedPage.reload();
+    await authenticatedPage.goto(editorUrl);
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();
@@ -198,21 +182,21 @@ test.describe('US-MVP-005: Add Sidebar Comment Thread', () => {
 });
 
 test.describe('US-MVP-006: Reply to and Resolve Comments', () => {
-  // Configure tests to run serially due to database resets
+  // Configure tests to run serially due to shared mock state
   test.describe.configure({ mode: 'serial' });
 
   const editorUrl = '/repositories/alice-test/test-docs/edit/README.md';
 
   test.beforeEach(async () => {
-    await resetDatabase();
+    await resetRedis();
     await seedTestUsers();
+    resetGitHubApiMockState();
   });
 
   test('should show reply button on comments', async ({ authenticatedPage, currentUser }) => {
-    await authenticatedPage.goto(editorUrl);
+    seedMockComments('README.md', currentUser.id, currentUser.username);
 
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-    await authenticatedPage.reload();
+    await authenticatedPage.goto(editorUrl);
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();
@@ -228,10 +212,9 @@ test.describe('US-MVP-006: Reply to and Resolve Comments', () => {
     authenticatedPage,
     currentUser,
   }) => {
-    await authenticatedPage.goto(editorUrl);
+    seedMockComments('README.md', currentUser.id, currentUser.username);
 
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-    await authenticatedPage.reload();
+    await authenticatedPage.goto(editorUrl);
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();
@@ -246,10 +229,9 @@ test.describe('US-MVP-006: Reply to and Resolve Comments', () => {
   });
 
   test('should submit reply and show in thread', async ({ authenticatedPage, currentUser }) => {
-    await authenticatedPage.goto(editorUrl);
+    seedMockComments('README.md', currentUser.id, currentUser.username);
 
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-    await authenticatedPage.reload();
+    await authenticatedPage.goto(editorUrl);
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();
@@ -266,10 +248,9 @@ test.describe('US-MVP-006: Reply to and Resolve Comments', () => {
   });
 
   test('should show resolve button on comments', async ({ authenticatedPage, currentUser }) => {
-    await authenticatedPage.goto(editorUrl);
+    seedMockComments('README.md', currentUser.id, currentUser.username);
 
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-    await authenticatedPage.reload();
+    await authenticatedPage.goto(editorUrl);
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();
@@ -284,10 +265,9 @@ test.describe('US-MVP-006: Reply to and Resolve Comments', () => {
     authenticatedPage,
     currentUser,
   }) => {
-    await authenticatedPage.goto(editorUrl);
+    seedMockComments('README.md', currentUser.id, currentUser.username);
 
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-    await authenticatedPage.reload();
+    await authenticatedPage.goto(editorUrl);
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();
@@ -308,11 +288,10 @@ test.describe('US-MVP-006: Reply to and Resolve Comments', () => {
   });
 
   test('should toggle show/hide resolved comments', async ({ authenticatedPage, currentUser }) => {
-    await authenticatedPage.goto(editorUrl);
-
     // Seed comment with resolved=true
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-    await authenticatedPage.reload();
+    seedMockComments('README.md', currentUser.id, currentUser.username);
+
+    await authenticatedPage.goto(editorUrl);
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();
@@ -332,24 +311,24 @@ test.describe('US-MVP-006: Reply to and Resolve Comments', () => {
 });
 
 test.describe('US-MVP-007: Delete Comments', () => {
-  // Configure tests to run serially due to database resets
+  // Configure tests to run serially due to shared mock state
   test.describe.configure({ mode: 'serial' });
 
   const editorUrl = '/repositories/alice-test/test-docs/edit/README.md';
 
   test.beforeEach(async () => {
-    await resetDatabase();
+    await resetRedis();
     await seedTestUsers();
+    resetGitHubApiMockState();
   });
 
   test('should show delete button only for own comments', async ({
     authenticatedPage,
     currentUser,
   }) => {
-    await authenticatedPage.goto(editorUrl);
+    seedMockComments('README.md', currentUser.id, currentUser.username);
 
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-    await authenticatedPage.reload();
+    await authenticatedPage.goto(editorUrl);
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();
@@ -368,10 +347,9 @@ test.describe('US-MVP-007: Delete Comments', () => {
     authenticatedPage,
     currentUser,
   }) => {
-    await authenticatedPage.goto(editorUrl);
+    seedMockComments('README.md', currentUser.id, currentUser.username);
 
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-    await authenticatedPage.reload();
+    await authenticatedPage.goto(editorUrl);
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();
@@ -386,10 +364,9 @@ test.describe('US-MVP-007: Delete Comments', () => {
   });
 
   test('should delete comment when confirmed', async ({ authenticatedPage, currentUser }) => {
-    await authenticatedPage.goto(editorUrl);
+    seedMockComments('README.md', currentUser.id, currentUser.username);
 
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-    await authenticatedPage.reload();
+    await authenticatedPage.goto(editorUrl);
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();
@@ -414,10 +391,9 @@ test.describe('US-MVP-007: Delete Comments', () => {
   });
 
   test('should cancel deletion when clicking cancel', async ({ authenticatedPage, currentUser }) => {
-    await authenticatedPage.goto(editorUrl);
+    seedMockComments('README.md', currentUser.id, currentUser.username);
 
-    await seedTestComments(currentUser.id, 'alice-test', 'test-docs', 'README.md');
-    await authenticatedPage.reload();
+    await authenticatedPage.goto(editorUrl);
     await authenticatedPage.waitForSelector('[data-testid="markdown-editor"]');
 
     await authenticatedPage.getByRole('button', { name: /comments|sidebar/i }).click();

@@ -47,12 +47,14 @@
       "frontend": "React with TypeScript and Vite",
       "backend": "Node.js with Express and TypeScript",
       "realTimeSync": "WebSocket server (y-websocket) for Yjs CRDT",
-      "database": "PostgreSQL for users, comments, and metadata (documents stored in GitHub)",
+      "sessionStorage": "Redis for user profiles and encrypted tokens",
+      "documentStorage": "GitHub for markdown documents",
+      "commentStorage": "GitHub (YAML files in .mume/ folder)",
       "githubAPI": "Octokit for GitHub repository operations"
     },
     "githubIntegration": {
       "repositoryStructure": "Users can select any GitHub repository they have write access to",
-      "commentStorage": "Store comments in PostgreSQL database for faster queries",
+      "commentStorage": "Store comments as YAML files in GitHub under .mume/ folder",
       "commitStrategy": "Batch changes from multiple users into single commits every 30-60 seconds to avoid excessive commit history",
       "authentication": "GitHub OAuth with encrypted token storage"
     },
@@ -120,12 +122,12 @@
     },
     "MVP": {
       "approach": [
-        "Set up PostgreSQL and Redis with Docker Compose",
+        "Set up Redis with Docker Compose for session and user data",
         "Implement GitHub OAuth and session management with encrypted token storage",
         "Build GitHub service layer with Octokit for repository operations",
         "Create repository selector and folder navigation UI",
         "Implement automatic GitHub commits with conflict resolution",
-        "Build commenting system (database schema, sidebar UI, anchoring logic)",
+        "Build commenting system (YAML files in GitHub, sidebar UI, anchoring logic)",
         "Add GitHub avatars to user presence indicators"
       ],
       "durationEstimate": "2-4 weeks of development",
@@ -170,29 +172,24 @@
     {
       "id": "US-MVP-008",
       "phase": "MVP",
-      "title": "Set up PostgreSQL and Redis with Docker Compose",
-      "description": "As a developer, I need a database and session store to support user authentication, encrypted tokens, and comments.",
+      "title": "Set up Redis with Docker Compose",
+      "description": "As a developer, I need a session store to support user authentication and encrypted tokens.",
       "acceptanceCriteria": [
         "docker-compose.yml created in root directory",
-        "PostgreSQL service configured (port 5432, volume for data persistence)",
-        "Redis service configured (port 6379) for session store",
-        "Adminer service configured (port 8080) for database GUI",
-        "Environment variables in .env: DATABASE_URL, REDIS_URL",
-        "Database migrations directory created: db/migrations/",
-        "Migration 001: Create users table (id, github_id, username, email, avatar_url, created_at, updated_at)",
-        "Migration 002: Create user_tokens table (id, user_id, provider, access_token_encrypted, access_token_iv, access_token_auth_tag, token_type, scope, expires_at, created_at, updated_at)",
-        "Migration 003: Create comments table (id, user_id, document_path, repo_owner, repo_name, char_start, char_end, text, resolved, created_at, updated_at)",
-        "Migration 004: Create comment_replies table (id, comment_id, user_id, text, created_at, updated_at)",
-        "Migration runner implemented in apps/api/src/db/migrate.ts",
-        "Database connection pool configured in apps/api/src/db/connection.ts",
-        "Environment variables: DATABASE_URL, REDIS_URL, TOKEN_ENCRYPTION_KEY (32-byte hex)",
+        "Redis service configured (port 6379) for session and user data store",
+        "Environment variables in .env: REDIS_URL",
+        "Redis user service created in apps/api/src/services/redis-user.service.ts",
+        "User profiles stored in Redis with key pattern: user:github:{githubId}",
+        "Encrypted tokens stored in Redis with key pattern: token:{userId}",
+        "User ID counter stored in Redis with key: user:id:counter",
+        "Environment variables: REDIS_URL, TOKEN_ENCRYPTION_KEY (32-byte hex)",
         "README.md updated with Docker Compose instructions",
         "Typecheck passes",
-        "Verify: docker-compose up starts all services successfully"
+        "Verify: docker-compose up starts Redis successfully"
       ],
       "priority": 199,
       "passes": true,
-      "notes": "Completed: All database infrastructure set up successfully. Docker Compose running PostgreSQL, Redis, and Adminer. All migrations applied successfully. Typecheck passes."
+      "notes": "Completed: Redis infrastructure set up successfully. PostgreSQL removed - user data and tokens stored in Redis, comments stored as YAML files in GitHub under .mume/ folder. Typecheck passes."
     },
     {
       "id": "US-MVP-009",

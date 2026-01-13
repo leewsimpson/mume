@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import passport from 'passport';
 import type { SessionUser } from '../config/passport.js';
-import pool from '../db/connection.js';
+import { redisUserService } from '../server.js';
 
 const router = Router();
 
@@ -23,23 +23,19 @@ router.post('/test-login', async (req, res) => {
   }
 
   try {
-    // Fetch user from database
-    const result = await pool.query(
-      'SELECT id, github_id, username, email, avatar_url FROM users WHERE id = $1',
-      [userId]
-    );
+    // Fetch user from Redis
+    const redisUser = await redisUserService.getUserById(userId.toString());
 
-    if (result.rows.length === 0) {
+    if (!redisUser) {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const dbUser = result.rows[0];
     const user: SessionUser = {
-      id: dbUser.id,
-      githubId: dbUser.github_id,
-      username: dbUser.username,
-      email: dbUser.email,
-      avatarUrl: dbUser.avatar_url,
+      id: parseInt(redisUser.id, 10),
+      githubId: redisUser.githubId,
+      username: redisUser.username,
+      email: redisUser.email,
+      avatarUrl: redisUser.avatarUrl,
     };
 
     // Log the user in via Passport

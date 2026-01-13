@@ -3,4 +3,4 @@
  */
 
 export * from './auth.fixture.js';
-export * from './database.fixture.js';
+export * from './redis.fixture.js';

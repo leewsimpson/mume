@@ -36,10 +36,10 @@ These features are explicitly out of scope:
 - **Frontend:** React with TypeScript and Vite
 - **Backend:** Node.js with Express and TypeScript
 - **Real-time sync:** Yjs CRDT with WebSocket (y-websocket)
-- **Database:** PostgreSQL (users, comments, metadata)
-- **Storage:** GitHub (markdown documents)
+- **Session & User Data:** Redis (user profiles, encrypted tokens)
+- **Document Storage:** GitHub (markdown documents)
+- **Comment Storage:** GitHub (YAML files in `.mume/` folder)
 - **Authentication:** GitHub OAuth with AES-256-GCM encrypted token storage
-- **Session Store:** Redis
 
 ## Phase Deliverables
 
@@ -75,7 +75,7 @@ These features are explicitly out of scope:
 
 **Authentication:** Changed from Gmail SSO (original plan) to GitHub OAuth to provide seamless integration with GitHub repositories.
 
-**Token Security:** GitHub access tokens are encrypted with AES-256-GCM before storage in PostgreSQL to protect user credentials.
+**Token Security:** GitHub access tokens are encrypted with AES-256-GCM before storage in Redis to protect user credentials.
 
 **Conflict Resolution:** Automatic conflict handling for GitHub commits - system fetches latest SHA and retries on 409 conflicts, ensuring no data loss.
 

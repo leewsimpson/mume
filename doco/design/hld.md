@@ -255,13 +255,14 @@ Infrastructure:
 | **Editor** | Basic Textarea | Basic Textarea (deferred CodeMirror) | Yjs integration works well with textarea |
 | **Backend** | Express | Express (deferred NestJS) | Kept Express for simplicity |
 | **Auth** | Name-based | GitHub OAuth | Seamless GitHub integration |
-| **Storage** | In-memory | GitHub + PostgreSQL | Documents in GitHub, metadata in PostgreSQL |
+| **Storage** | In-memory | GitHub + Redis | Documents in GitHub, user data in Redis, comments in GitHub |
 | **Features** | Basic editing | + Document mgmt, comments, avatars, manual save, comment highlighting | Core collaborative features with visual feedback |
 
 ## Architecture Evolution Considerations
 
-- **Database:** PostgreSQL for user data, sessions, metadata; GitHub API for document content
-- **Session Management:** Redis or PostgreSQL-based sessions
+- **Session Storage:** Redis for user profiles, encrypted tokens, and session data
+- **Document Storage:** GitHub API for markdown document content
+- **Comment Storage:** GitHub (YAML files in `.mume/` folder preserving document path structure)
 - **Deployment:** Target Railway or Render for hosting
 - **Monitoring:** Add structured logging and basic observability
 
@@ -310,9 +311,9 @@ Infrastructure:
 
 ## Completed in MVP ✅
 
-- PostgreSQL database with users, tokens, comments, and replies tables
+- Redis for user profiles and encrypted token storage
 - GitHub integration via Octokit with automatic commit strategy (30s intervals)
-- Comment storage with threading (replies) in PostgreSQL
+- Comment storage as YAML files in GitHub under `.mume/` folder with threading (replies)
 - Session management via Redis with express-session
 - Token encryption with AES-256-GCM
 - Comment highlighting in editor with bidirectional navigation (text ↔ sidebar)
