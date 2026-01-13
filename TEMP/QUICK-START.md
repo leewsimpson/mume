@@ -1,16 +1,25 @@
 # Quick Start: Enable CI/CD in 5 Minutes
 
-## 1️⃣ Create Service Principal (30 seconds)
+## 1️⃣ Create Service Principal
 
+⚠️ **Enterprise Azure Account** - You're in the Deloitte tenant and don't have permissions to create service principals.
+
+**You have two options:**
+
+### Option A: Request from Azure AD Admin (Recommended)
+See `TEMP/ENTERPRISE-SETUP.md` for a ready-to-send email template requesting a service principal from your Azure AD administrator.
+
+### Option B: Use Personal Azure (For Testing)
+If you have a personal Azure subscription, you can test CI/CD there first:
 ```bash
 az ad sp create-for-rbac \
   --name "github-mume-cicd" \
   --role contributor \
-  --scopes /subscriptions/a8c56054-d1fc-4874-8d04-29f2b3f8d937/resourceGroups/rg-mume \
+  --scopes /subscriptions/<your-subscription-id>/resourceGroups/<your-rg> \
   --sdk-auth
 ```
 
-**Copy the entire JSON output** - you'll need it in step 2.
+**Once you have the service principal JSON, continue to step 2.**
 
 ---
 
@@ -105,8 +114,14 @@ Your CI/CD is now active. Every push to main will automatically deploy:
 - Check Azure CLI is authenticated in workflow (should be automatic with AZURE_CREDENTIALS)
 - Check resource group `rg-mume` exists in subscription
 
+### "Insufficient privileges" error creating service principal
+- You're in an enterprise Azure tenant
+- See `TEMP/ENTERPRISE-SETUP.md` for how to request from Azure AD admin
+- Or use a personal Azure account for testing
+
 ### Still stuck?
 See detailed docs:
+- `TEMP/ENTERPRISE-SETUP.md` - Enterprise Azure setup (NEW)
 - `TEMP/cicd-setup-summary.md` - Full setup guide
 - `TEMP/github-actions-setup.md` - Step-by-step instructions
 - `DEPLOYMENT.md` - Architecture and infrastructure details
