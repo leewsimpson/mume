@@ -1,4 +1,4 @@
-name: Build API Docker Image
+name: API
 
 on:
   push:
@@ -6,7 +6,13 @@ on:
       - main
     paths:
       - 'apps/api/**'
-      - '.github/workflows/api-build.yml'
+      - '.github/workflows/api-deploy.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'apps/api/**'
+      - '.github/workflows/api-deploy.yml'
   workflow_dispatch:
 
 permissions:
@@ -16,9 +22,37 @@ env:
   ACR_LOGIN_SERVER: mumeacr2gdrwkfmswho2.azurecr.io
 
 jobs:
-  build:
+  test:
+    name: Lint, Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: apps/api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm test
+
+  build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -40,7 +74,7 @@ jobs:
           TIMESTAMP=$(date +%Y%m%d-%H%M%S)
           IMAGE_TAG="main-${SHORT_SHA}-${TIMESTAMP}"
           echo "image-tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
-          echo "📦 Image tag: ${IMAGE_TAG}"
+          echo "Image tag: ${IMAGE_TAG}"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -57,9 +91,9 @@ jobs:
 
       - name: Deployment instructions
         run: |
-          echo "✅ Docker image pushed successfully!"
+          echo "Docker image pushed successfully!"
           echo ""
-          echo "📦 Image: ${{ env.ACR_LOGIN_SERVER }}/mume-api:${{ steps.tag.outputs.image-tag }}"
+          echo "Image: ${{ env.ACR_LOGIN_SERVER }}/mume-api:${{ steps.tag.outputs.image-tag }}"
           echo ""
           echo "To deploy this image to Container Apps, run:"
           echo ""

@@ -167,12 +167,16 @@ openssl rand -hex 32
 
 #### 5. Register GitHub OAuth Application
 
+Create a **separate GitHub OAuth App for each environment** (dev, prod):
+
 1. Go to GitHub Settings → Developer settings → OAuth Apps
 2. Create a new OAuth App:
-   - **Application name**: Mume (Dev/Prod)
+   - **Application name**: Mume Dev (or Mume Prod)
    - **Homepage URL**: `https://your-static-web-app.azurestaticapps.net`
    - **Authorization callback URL**: `https://your-api.azurecontainerapps.io/auth/github/callback`
 3. Save the Client ID and Client Secret
+
+> **Note:** Azure Container Apps URLs are **stable across revisions**. The callback URL only changes if you delete/recreate the Container App or change its name. New deployments do not affect the URL.
 
 ### Deployment Process
 

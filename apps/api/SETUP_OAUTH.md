@@ -64,10 +64,29 @@ This guide explains how to set up GitHub OAuth for local development.
 - **"Application suspended"**: Check that your GitHub account is in good standing
 - **Session issues**: Ensure Redis is running (`docker ps` should show the redis container)
 
-## Production Setup
+## Production Setup (Azure)
 
-For production deployment:
-1. Create a separate GitHub OAuth App with production URLs
-2. Update environment variables with production values
-3. Use HTTPS for all URLs
-4. Store secrets securely (e.g., AWS Secrets Manager, Azure Key Vault)
+For Azure deployment, you need a **separate GitHub OAuth App for each environment** (dev, prod).
+
+### URL Stability
+
+Azure Container Apps URLs follow the pattern:
+```
+https://{app-name}.{environment-domain}.azurecontainerapps.io
+```
+
+**The URL is stable across deployments.** New container revisions do not change the callback URL. It only changes if you:
+- Delete and recreate the Container App
+- Change the Container App name
+- Delete and recreate the Container Environment
+
+### Setup Steps
+
+1. Deploy the infrastructure first (see [infra/README.md](../../infra/README.md))
+2. Note the API URL from the deployment output
+3. Create a GitHub OAuth App with:
+   - **Homepage URL**: Your Static Web App URL
+   - **Callback URL**: `https://{api-url}/auth/github/callback`
+4. Add the Client ID and Secret to GitHub Secrets (see infra docs)
+
+For full deployment instructions, see [infra/README.md](../../infra/README.md#5-register-github-oauth-application).
