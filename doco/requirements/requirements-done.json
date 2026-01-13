@@ -820,6 +820,33 @@
       "priority": 214,
       "passes": true,
       "notes": "Completed: New Document button with faPlus icon added to editor toolbar. Opens CreateDocumentModal with initialFolderPath pre-filled from current document's folder. Ctrl+N/Cmd+N keyboard shortcut with preventDefault to block browser new window. Unsaved changes confirmation before opening modal. E2E tests in editor-navigation.test.ts (7 tests for US-MVP-014). Typecheck passes."
+    },
+    {
+      "id": "US-MVP-012",
+      "phase": "MVP",
+      "title": "Comment highlighting in editor",
+      "description": "As a user, I want to see visual highlights in the editor for text ranges that have comments, so I can easily identify which parts of the document have feedback and navigate between comments and their anchored text.",
+      "acceptanceCriteria": [
+        "CommentHighlights component created: apps/frontend/src/components/CommentHighlights.tsx",
+        "Component receives comments array with charStart, charEnd positions from EditorLayout",
+        "Text ranges with comments are visually highlighted in the editor with semi-transparent background",
+        "Each comment highlight uses a consistent colour (e.g., yellow/amber with 20% opacity)",
+        "Resolved comments shown with different colour (e.g., grey) or hidden based on sidebar 'Show resolved' toggle",
+        "Overlapping comment ranges are handled gracefully (darker combined highlight or stacked colours)",
+        "Clicking a highlighted region in the editor scrolls to and expands the corresponding comment in the sidebar",
+        "Clicking a comment in the sidebar scrolls the editor to the highlighted text and briefly pulses the highlight",
+        "Highlight positions recalculate when textarea content changes (integrate with Yjs text observer)",
+        "Highlight overlay uses mirror-div technique (same as RemoteCursors) for accurate positioning",
+        "Highlights are positioned correctly even when textarea is scrolled",
+        "Highlights do not interfere with text selection or typing in the editor",
+        "Empty state: no highlights shown when document has no comments",
+        "Performance: efficiently render highlights for documents with up to 50 comments",
+        "Typecheck passes",
+        "Unit tests cover: highlight rendering, click navigation, scroll synchronisation, resolved state filtering"
+      ],
+      "priority": 212,
+      "passes": true,
+      "notes": "Completed: CommentHighlights component implemented at apps/frontend/src/components/CommentHighlights.tsx. Visual highlights with different colours for active/normal/resolved comments. Mirror-div technique for accurate positioning. Integration with EditorLayout and MarkdownEditor. Click handler for bidirectional navigation between highlights and sidebar. Pulse animation for visual feedback. Comprehensive unit tests in CommentHighlights.test.tsx. Typecheck passes."
     }
   ]
 }
