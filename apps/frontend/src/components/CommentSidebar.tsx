@@ -168,7 +168,12 @@ export function CommentSidebar({
             'Content-Type': 'application/json',
           },
           credentials: 'include',
-          body: JSON.stringify({ text: replyText }),
+          body: JSON.stringify({
+            text: replyText,
+            documentPath: filePath,
+            repoOwner: owner,
+            repoName: repo,
+          }),
         }
       );
 
@@ -197,7 +202,12 @@ export function CommentSidebar({
             'Content-Type': 'application/json',
           },
           credentials: 'include',
-          body: JSON.stringify({ resolved: !currentResolved }),
+          body: JSON.stringify({
+            resolved: !currentResolved,
+            documentPath: filePath,
+            repoOwner: owner,
+            repoName: repo,
+          }),
         }
       );
 
@@ -221,8 +231,13 @@ export function CommentSidebar({
 
     try {
       setDeletingCommentId(deleteConfirmCommentId);
+      const queryParams = new URLSearchParams({
+        documentPath: filePath,
+        repoOwner: owner,
+        repoName: repo,
+      });
       const response = await fetch(
-        `${API_URL}/api/comments/${deleteConfirmCommentId}`,
+        `${API_URL}/api/comments/${deleteConfirmCommentId}?${queryParams}`,
         {
           method: 'DELETE',
           credentials: 'include',

@@ -12,10 +12,8 @@ import { resetRedis, seedTestUsers } from '../fixtures/redis.fixture.js';
  * Comments are stored in GitHub as YAML files (mocked via API interception).
  */
 
-test.describe('US-MVP-005: Add Sidebar Comment Thread', () => {
-  // Configure tests to run serially due to shared mock state
-  test.describe.configure({ mode: 'serial' });
 
+test.describe('US-MVP-005: Add Sidebar Comment Thread', () => {
   const editorUrl = '/repositories/alice-test/test-docs/edit/README.md';
 
   test.beforeEach(async () => {
@@ -47,8 +45,9 @@ test.describe('US-MVP-005: Add Sidebar Comment Thread', () => {
     const sidebar = authenticatedPage.locator('[data-testid="comment-sidebar"]');
     await expect(sidebar).toBeVisible();
 
-    // Click again to close
-    await sidebarToggle.click();
+    // Click the close button within the sidebar to close it
+    const closeButton = sidebar.locator('.close-button');
+    await closeButton.click();
 
     // Sidebar should be hidden
     await expect(sidebar).not.toBeVisible();
@@ -181,10 +180,8 @@ test.describe('US-MVP-005: Add Sidebar Comment Thread', () => {
   });
 });
 
-test.describe('US-MVP-006: Reply to and Resolve Comments', () => {
-  // Configure tests to run serially due to shared mock state
-  test.describe.configure({ mode: 'serial' });
 
+test.describe('US-MVP-006: Reply to and Resolve Comments', () => {
   const editorUrl = '/repositories/alice-test/test-docs/edit/README.md';
 
   test.beforeEach(async () => {
@@ -310,10 +307,8 @@ test.describe('US-MVP-006: Reply to and Resolve Comments', () => {
   });
 });
 
-test.describe('US-MVP-007: Delete Comments', () => {
-  // Configure tests to run serially due to shared mock state
-  test.describe.configure({ mode: 'serial' });
 
+test.describe('US-MVP-007: Delete Comments', () => {
   const editorUrl = '/repositories/alice-test/test-docs/edit/README.md';
 
   test.beforeEach(async () => {
