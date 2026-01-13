@@ -132,8 +132,12 @@ export async function saveDocumentWithRetry(
   const ytext = ydoc.getText('content');
   const content = ytext.toString();
 
+  console.log('[SAVE_RETRY] Content extracted, length:', content.length);
+
   // Generate commit message
   const message = formatCommitMessage(filePath, editors);
+
+  console.log('[SAVE_RETRY] Commit message:', message);
 
   logger?.info('Attempting to save document to GitHub', {
     documentId,
@@ -148,6 +152,7 @@ export async function saveDocumentWithRetry(
   for (let attempt = 1; attempt <= MAX_CONFLICT_RETRIES; attempt++) {
     try {
       const currentSha = documentStateService.getDocument(documentId)?.sha || sha;
+      console.log('[SAVE_RETRY] Attempt', attempt, 'with SHA:', currentSha);
 
       const result = await githubService.updateFile(
         owner,
@@ -161,6 +166,7 @@ export async function saveDocumentWithRetry(
       );
 
       // Success! Update document state
+      console.log('[SAVE_RETRY] Save successful! New SHA:', result.sha);
       documentStateService.markSaved(documentId, result.sha);
 
       logger?.info('Successfully saved document to GitHub', {
@@ -240,6 +246,7 @@ export async function saveDocumentWithRetry(
         }
       } else {
         // Non-conflict error, log and fail
+        console.error('[SAVE_RETRY] Non-conflict error:', error);
         logger?.error(
           'Failed to save document to GitHub',
           error instanceof Error ? error : new Error(String(error)),
