@@ -283,7 +283,6 @@ export function EditorLayout({
     <div className="editor-layout">
       <div className="editor-header">
         <div className="editor-header__left">
-          <ConnectionStatus status={status} />
           <div className="editor-header__doc">
             <FontAwesomeIcon icon={faFileAlt} className="editor-header__doc-icon" />
             <span className="editor-header__doc-name">{fileName}</span>
@@ -291,16 +290,12 @@ export function EditorLayout({
               <span className="editor-header__doc-path">{folderPath}/</span>
             )}
           </div>
-          {status === 'connecting' && reconnectAttempts > 0 && (
-            <span className="reconnect-info">
-              Reconnecting... ({reconnectAttempts})
-            </span>
-          )}
           {(saveStatus === 'saving' || saveStatus === 'saved' || saveStatus === 'error') && (
             <SaveStatus status={saveStatus} />
           )}
         </div>
         <div className="editor-header__right">
+          <ConnectionStatus status={status} reconnectAttempts={reconnectAttempts} />
           <SaveNowButton
             onSave={handleSaveNow}
             isSaving={isSaving}

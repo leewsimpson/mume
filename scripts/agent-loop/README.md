@@ -1,12 +1,12 @@
-# Ralph Wiggum - AI Agent Loop Script
+# AI Agent Loop Script
 
 ## Overview
 
-Ralph is a long-running AI agent loop that automates task execution using Claude AI. It repeatedly invokes Claude with a predefined prompt, monitors progress, and archives results when switching between different branches/tasks.
+This is a long-running AI agent loop that automates task execution using AI Agent. It repeatedly invokes the agent with a predefined prompt, monitors progress, and archives results when switching between different branches/tasks.
 
 ## Architecture Diagram
 
-```mermaid
+```mermaid 
 flowchart TD
     Start([Start Script]) --> Init[Initialize Variables<br/>MAX_ITERATIONS, paths]
     Init --> CheckArchive{Previous run exists<br/>& branch changed?}
@@ -25,9 +25,9 @@ flowchart TD
     LoopCheck -->|No| MaxReached[Max Iterations Reached<br/>Exit with error]
     LoopCheck -->|Yes| Display[Display Iteration Header<br/>i of MAX_ITERATIONS]
     
-    Display --> RunClaude[Run Claude AI<br/>Input: prompt.md<br/>--dangerously-skip-permissions]
+    Display --> Runagent[Run agent AI<br/>Input: prompt.md<br/>--dangerously-skip-permissions]
     
-    RunClaude --> CheckOutput{Output contains<br/>COMPLETE promise?}
+    Runagent --> CheckOutput{Output contains<br/>COMPLETE promise?}
     
     CheckOutput -->|Yes| Success[Display Success Message<br/>Exit with success]
     CheckOutput -->|No| Sleep[Sleep 2 seconds]
@@ -61,7 +61,7 @@ When the branch name in `prd.json` changes from the previous run:
 ```
 For each iteration (1 to MAX_ITERATIONS):
   1. Display iteration header
-  2. Execute: cat prompt.md | claude --dangerously-skip-permissions
+  2. Execute: cat prompt.md | agent --dangerously-skip-permissions
   3. Check output for completion signal: <promise>COMPLETE</promise>
   4. If complete → exit with success (code 0)
   5. If not complete → sleep 2 seconds and continue
@@ -69,7 +69,7 @@ For each iteration (1 to MAX_ITERATIONS):
 
 ### 4. **Completion Detection**
 
-The script looks for a specific XML-like tag in Claude's output:
+The script looks for a specific XML-like tag in agent's output:
 ```xml
 <promise>COMPLETE</promise>
 ```
@@ -80,25 +80,15 @@ When found, the script terminates successfully.
 
 | Condition | Exit Code | Message |
 |-----------|-----------|---------|
-| Tasks completed (COMPLETE tag found) | 0 | "Ralph completed all tasks!" |
-| Max iterations reached | 1 | "Ralph reached max iterations without completing" |
-
-## Usage
-
-```bash
-# Run with default 10 iterations
-./ralph.sh
-
-# Run with custom iterations
-./ralph.sh 20
-```
+| Tasks completed (COMPLETE tag found) | 0 | "agent-loop completed all tasks!" |
+| Max iterations reached | 1 | "agent-loop reached max iterations without completing" |
 
 ## File Dependencies
 
 ```
-ralph/
-├── ralph.sh          # This script
-├── prompt.md         # Input prompt for Claude
+agent-loop/
+├── agent-loop.sh          # This script
+├── prompt.md         # Input prompt for agent
 ├── prd.json          # Product Requirements Document (contains branchName)
 ├── progress.txt      # Running progress log
 ├── .last-branch      # Tracks last branch name
@@ -111,16 +101,16 @@ ralph/
 ## Workflow Example
 
 ```
-Iteration 1: Claude analyzes prompt → performs tasks → returns output
-Iteration 2: Claude continues from where it left off
-Iteration 3: Claude finishes → outputs <promise>COMPLETE</promise>
+Iteration 1: agent analyzes prompt → performs tasks → returns output
+Iteration 2: agent continues from where it left off
+Iteration 3: agent finishes → outputs <promise>COMPLETE</promise>
 Script: Detects completion tag → exits successfully
 ```
 
 ## Error Handling
 
 - Uses `set -e` to exit on errors
-- `|| true` on Claude execution prevents script termination if Claude fails
+- `|| true` on agent execution prevents script termination if agent fails
 - Checks for file existence before operations
 - Validates JSON parsing with fallback to empty string
 

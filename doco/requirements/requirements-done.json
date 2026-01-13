@@ -239,17 +239,17 @@
       "description": "As a user, I want to know if I'm connected to the server or if there are sync issues.",
       "acceptanceCriteria": [
         "ConnectionStatus component created in apps/frontend/src/components/ConnectionStatus.tsx",
-        "Connection status indicator visible in UI (e.g., header)",
-        "Shows 'Connected' state with green indicator when WebSocket connected",
-        "Shows 'Disconnected' state with red indicator when connection lost",
-        "Shows 'Connecting...' state during reconnection attempts",
+        "Connection status indicator hidden when connected (no green dot shown)",
+        "Connection status indicator positioned on right side of header",
+        "Shows clear warning message with red indicator when connection lost (e.g., 'Connection lost - changes may not be saved')",
+        "Shows 'Connecting to server...' or 'Reconnecting... (attempt N)' during connection attempts",
         "Indicator updates in real-time based on WebSocket state",
         "Typecheck passes",
-        "Test by stopping backend server and verifying disconnect indicator"
+        "Test by stopping backend server and verifying disconnect indicator with clear message"
       ],
       "priority": 13,
       "passes": true,
-      "notes": "All acceptance criteria verified via comprehensive automated tests. Created ConnectionStatus component with proper state display (Connected/Connecting.../Disconnected) and color-coded indicators (green/yellow/red via CSS classes). Refactored EditorLayout to use ConnectionStatus component instead of inline implementation. 22 automated tests covering component rendering, state display, real-time updates, CSS class application, and UI visibility. All 180 frontend tests passing. Typecheck passes. Committed: 098d0aa."
+      "notes": "Updated to hide indicator when connected (no green dot). Moved to right side of header. Now displays clear warning messages when disconnected or reconnecting. Component only renders when there's a connection problem to reduce visual noise."
     },
     {
       "id": "US-014",

@@ -76,11 +76,13 @@ describe('EditorLayout Component', () => {
     expect(layout).toHaveClass('editor-layout');
   });
 
-  it('should render header with connection status', () => {
-    render(<EditorLayout userName="Test User" documentId="test-doc" />);
+  it('should render header with connection status component (hidden when connected)', () => {
+    const { container } = render(<EditorLayout userName="Test User" documentId="test-doc" />);
 
-    // Verify header elements
-    expect(screen.getByText('Connected')).toBeInTheDocument();
+    // Connection status is hidden when connected - this is the expected behaviour
+    // The component only shows when there's a connection problem
+    const connectionStatus = container.querySelector('.connection-status');
+    expect(connectionStatus).not.toBeInTheDocument();
   });
 
   it('should render header with user presence component', () => {

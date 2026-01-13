@@ -90,6 +90,7 @@
   font-size: 0.875rem;
   font-family: inherit;
   resize: vertical;
+  box-sizing: border-box;
 }
 
 .form-group textarea:focus {

@@ -35,9 +35,27 @@ vi.mock('../src/components/UserPresence', () => ({
 }));
 
 vi.mock('../src/components/ConnectionStatus', () => ({
-  ConnectionStatus: ({ status }: { status: string }) => (
-    <div data-testid="connection-status">{status}</div>
-  ),
+  ConnectionStatus: ({ status, reconnectAttempts = 0 }: { status: string; reconnectAttempts?: number }) => {
+    // Match real component behaviour - hidden when connected
+    if (status === 'connected') {
+      return null;
+    }
+    const getMessage = () => {
+      if (status === 'disconnected') {
+        return 'Connection lost - changes may not be saved';
+      }
+      if (status === 'connecting' && reconnectAttempts > 0) {
+        return `Reconnecting... (attempt ${reconnectAttempts})`;
+      }
+      return 'Connecting to server...';
+    };
+    return (
+      <div data-testid="connection-status" role="alert">
+        <span className="status-indicator"></span>
+        <span className="connection-status__message">{getMessage()}</span>
+      </div>
+    );
+  },
 }));
 
 describe('Error Handling in EditorLayout', () => {
@@ -69,10 +87,10 @@ describe('Error Handling in EditorLayout', () => {
       reconnectAttempts: 0,
     });
 
-    render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     expect(screen.queryByText(/Connection error/i)).not.toBeInTheDocument();
-    expect(screen.queryByText('⚠️')).not.toBeInTheDocument();
+    expect(container.querySelector('.error-banner')).not.toBeInTheDocument();
   });
 
   it('should display error banner when error exists', () => {
@@ -86,10 +104,12 @@ describe('Error Handling in EditorLayout', () => {
       reconnectAttempts: 2,
     });
 
-    render(<EditorLayout userName="TestUser" documentId="test-doc" />);
+    const { container } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
     expect(screen.getByText('Connection error: Network failure')).toBeInTheDocument();
-    expect(screen.getByText('⚠️')).toBeInTheDocument();
+    // Error banner uses FontAwesome icon, not emoji
+    const errorBanner = container.querySelector('.error-banner');
+    expect(errorBanner).toBeInTheDocument();
   });
 
   it('should display error banner with warning icon', () => {
@@ -110,7 +130,8 @@ describe('Error Handling in EditorLayout', () => {
 
     const errorIcon = container.querySelector('.error-icon');
     expect(errorIcon).toBeInTheDocument();
-    expect(errorIcon?.textContent).toBe('⚠️');
+    // FontAwesome icon is rendered as SVG, not text
+    expect(errorIcon?.querySelector('svg')).toBeInTheDocument();
 
     const errorMessage = container.querySelector('.error-message');
     expect(errorMessage).toBeInTheDocument();
@@ -146,10 +167,11 @@ describe('Error Handling in EditorLayout', () => {
 
     render(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
-    expect(screen.getByText('Reconnecting... (attempt 3)')).toBeInTheDocument();
+    // Reconnect info is now part of ConnectionStatus component
+    expect(screen.getByText(/Reconnecting.*attempt 3/)).toBeInTheDocument();
   });
 
-  it('should not display reconnect info on first connection attempt', () => {
+  it('should display initial connecting message on first connection attempt', () => {
     mockUseYjsProvider.mockReturnValue({
       ydoc: null,
       ytext: null,
@@ -162,7 +184,9 @@ describe('Error Handling in EditorLayout', () => {
 
     render(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
+    // On first attempt, shows "Connecting to server..." not "Reconnecting..."
     expect(screen.queryByText(/Reconnecting/i)).not.toBeInTheDocument();
+    expect(screen.getByText('Connecting to server...')).toBeInTheDocument();
   });
 
   it('should display reconnect info with correct attempt number', () => {
@@ -178,7 +202,7 @@ describe('Error Handling in EditorLayout', () => {
 
     render(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
-    expect(screen.getByText('Reconnecting... (attempt 5)')).toBeInTheDocument();
+    expect(screen.getByText(/Reconnecting.*attempt 5/)).toBeInTheDocument();
   });
 
   it('should display both error and reconnect info when disconnected and retrying', async () => {
@@ -196,7 +220,7 @@ describe('Error Handling in EditorLayout', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Connection error: Server unavailable')).toBeInTheDocument();
-      expect(screen.getByText('Reconnecting... (attempt 2)')).toBeInTheDocument();
+      expect(screen.getByText(/Reconnecting.*attempt 2/)).toBeInTheDocument();
     });
   });
 
@@ -246,7 +270,7 @@ describe('Error Handling in EditorLayout', () => {
 
     const { rerender } = render(<EditorLayout userName="TestUser" documentId="test-doc" />);
 
-    expect(screen.getByText('Reconnecting... (attempt 4)')).toBeInTheDocument();
+    expect(screen.getByText(/Reconnecting.*attempt 4/)).toBeInTheDocument();
 
     // Rerender with connected status
     mockUseYjsProvider.mockReturnValue({
