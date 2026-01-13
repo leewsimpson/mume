@@ -195,6 +195,102 @@
       "priority": 212,
       "passes": false,
       "notes": ""
+    },
+    {
+      "id": "US-MVP-015",
+      "phase": "MVP",
+      "title": "Branch selection in document browser",
+      "description": "As a user, I want to select a branch when browsing files so that I can view and edit documents from any branch, not just the default branch.",
+      "acceptanceCriteria": [
+        "Branch selector dropdown added to DocumentBrowser page header, next to repository name",
+        "Branch selector fetches available branches via new backend endpoint: GET /api/repositories/:owner/:repo/branches",
+        "Default branch is pre-selected when first loading the document browser",
+        "Selecting a different branch reloads the file tree for that branch",
+        "URL updated to include branch: /repositories/:owner/:repo?branch=feature-xyz",
+        "Branch parameter passed to existing tree endpoint: GET /api/repositories/:owner/:repo/tree?branch=...",
+        "Backend GitHubService.getRepositoryTree() updated to accept optional branch parameter",
+        "New backend GitHubService.listBranches() method using octokit.rest.repos.listBranches()",
+        "Branch selection persists when navigating to editor and back to browser",
+        "Loading state shown while fetching branches and file tree",
+        "Error handling for branches that no longer exist (redirect to default branch with message)",
+        "Typecheck passes",
+        "Unit tests for branch listing and branch-specific tree fetching"
+      ],
+      "priority": 213,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-MVP-016",
+      "phase": "MVP",
+      "title": "Display branch in editor header breadcrumb",
+      "description": "As a user, I want to see the repository name, current branch, and file path in the editor's top bar so that I always know which branch I'm editing on.",
+      "acceptanceCriteria": [
+        "Editor breadcrumb updated to show: {owner}/{repo} > {branch} > {folder/path} > {filename}",
+        "Branch segment only displayed when NOT on the default branch (keep current behaviour for main)",
+        "Branch segment styled distinctly (e.g., with branch icon or different colour) to differentiate from folder path",
+        "Branch name truncated with ellipsis if too long (max ~20 characters with tooltip for full name)",
+        "Route updated to include branch: /repositories/:owner/:repo/edit/:branch/* (file path as wildcard)",
+        "Editor page extracts branch from URL and passes to document loading",
+        "Branch information passed to WebSocket document registration",
+        "Branch displayed in document browser header as well for consistency",
+        "Typecheck passes",
+        "Unit tests for breadcrumb rendering with and without branch display"
+      ],
+      "priority": 214,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-MVP-017",
+      "phase": "MVP",
+      "title": "Save to selected branch",
+      "description": "As a user, I want my saves to commit to the branch I selected so that I can work on feature branches without affecting the main branch.",
+      "acceptanceCriteria": [
+        "Branch parameter added to document registration: POST /api/repositories/:owner/:repo/register body includes branch",
+        "documentState.service.ts stores branch alongside other document metadata (SHA, token, dirty state)",
+        "GitHubService.updateFile() updated to accept branch parameter",
+        "octokit.rest.repos.createOrUpdateFileContents() call includes branch parameter",
+        "Auto-save job (githubSync.job.ts) commits to the stored branch for each document",
+        "Manual save endpoint commits to the document's registered branch",
+        "SHA tracking is branch-specific (different branches have different file SHAs)",
+        "Conflict resolution handles branch-specific conflicts",
+        "Save status indicator shows which branch was saved to (e.g., 'Saved to feature-branch')",
+        "Typecheck passes",
+        "Unit tests for branch-specific saving and SHA management"
+      ],
+      "priority": 215,
+      "passes": false,
+      "notes": ""
+    },
+    {
+      "id": "US-MVP-018",
+      "phase": "MVP",
+      "title": "Create pull request from editor",
+      "description": "As a user, I want to create a pull request from my current branch so that I can submit my changes for review without leaving the editor.",
+      "acceptanceCriteria": [
+        "Create PR button added to editor header, visible when on a non-default branch",
+        "Button disabled with tooltip ('PRs can only be created from non-default branches') when on default branch",
+        "Clicking button opens CreatePRModal dialog component",
+        "Modal fetches and displays list of changed files via new endpoint: GET /api/repositories/:owner/:repo/compare/:baseBranch...:headBranch",
+        "Each file shown with checkbox (default: checked) to include/exclude from PR description",
+        "Files display change type indicator (added, modified, deleted)",
+        "Description field pre-filled with: 'Changes by {username} on {date}' (e.g., 'Changes by johndoe on 13 Jan 2026')",
+        "Description field is editable (textarea)",
+        "Title field added, pre-filled with branch name formatted as title (e.g., 'feature-new-login' becomes 'Feature new login')",
+        "PR always targets the repository's default branch (no target branch selector)",
+        "Create Pull Request button in modal calls: POST /api/repositories/:owner/:repo/pulls",
+        "Backend endpoint uses octokit.rest.pulls.create() to create PR",
+        "On success, user redirected to the PR URL on GitHub (opens in new tab)",
+        "Error handling for: no changes to compare, branch already has PR, API failures",
+        "Loading state while creating PR",
+        "Cancel button closes modal without action",
+        "Typecheck passes",
+        "Unit tests for modal component, file comparison, and PR creation endpoint"
+      ],
+      "priority": 216,
+      "passes": false,
+      "notes": ""
     }
   ]
 }

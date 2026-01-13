@@ -84,7 +84,6 @@ jobs:
           app_location: '/apps/frontend'
           output_location: 'dist'
           skip_api_build: true
-          skip_app_build: true
         env:
           VITE_API_URL: https://mume-api-dev.delightfulground-f44c4ea7.eastus.azurecontainerapps.io
 
