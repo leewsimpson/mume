@@ -1,6 +1,6 @@
 # Multi-User Markdown Editor
 
-A real-time collaborative markdown editor 
+A real-time collaborative markdown ABC editor 
 
 ## Overview 123
 
