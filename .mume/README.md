@@ -20,9 +20,9 @@ comments:
       username: leewsimpson
       avatarUrl: https://avatars.githubusercontent.com/u/2132765?v=4
     text: numbers
-    resolved: false
+    resolved: true
     createdAt: '2026-01-13T10:22:52.600Z'
-    updatedAt: '2026-01-13T10:22:52.600Z'
+    updatedAt: '2026-01-20T05:10:28.799Z'
     replies: []
 ---
 
