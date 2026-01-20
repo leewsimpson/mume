@@ -9,9 +9,9 @@ comments:
       username: leewsimpson
       avatarUrl: https://avatars.githubusercontent.com/u/2132765?v=4
     text: What?
-    resolved: false
+    resolved: true
     createdAt: '2026-01-13T07:27:46.530Z'
-    updatedAt: '2026-01-13T07:27:46.530Z'
+    updatedAt: '2026-01-20T05:10:27.477Z'
     replies: []
   - id: c-deQJoMm_1N
     charStart: 90
