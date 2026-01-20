@@ -24,6 +24,17 @@ comments:
     createdAt: '2026-01-13T10:22:52.600Z'
     updatedAt: '2026-01-20T05:10:30.302Z'
     replies: []
+  - id: c-8sp6tQf9aT
+    charStart: 90
+    charEnd: 97
+    author:
+      username: leewsimpson
+      avatarUrl: https://avatars.githubusercontent.com/u/2132765?v=4
+    text: Why are these numbers here?
+    resolved: false
+    createdAt: '2026-01-20T05:10:45.145Z'
+    updatedAt: '2026-01-20T05:10:45.145Z'
+    replies: []
 ---
 
 # Comments for README.md
